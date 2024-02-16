@@ -2,7 +2,7 @@
 name = "trill"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A CLI blockchain explorer compatible with EVM-supporting chains."
 
 [dependencies]
+clap = { version = "4.5.0", features = ["derive"] }
