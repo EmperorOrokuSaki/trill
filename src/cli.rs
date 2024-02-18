@@ -20,10 +20,10 @@ impl Cli {
         }
     }
 
-    pub fn exec(self) -> Result<()> {
+    pub async fn exec(self) -> Result<()> {
         match self.args.commands {
-            Commands::Inspect(args) => inspect::exec(args),
-            Commands::Profile(args) => profile::exec(args),
+            Commands::Inspect(args) => inspect::exec(args).await,
+            Commands::Profile(args) => profile::exec(args).await,
         }
     }
 }

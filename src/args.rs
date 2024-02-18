@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+use ethers::core::types::{Address, TxHash};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)] // Read from `Cargo.toml`
@@ -19,7 +20,7 @@ pub enum Commands {
 pub struct InspectArgs {
     /// The transaction hash to inspect
     #[arg(short, long)]
-    pub transaction: Option<String>,
+    pub transaction: Option<TxHash>,
     /// The block number to inspect
     #[arg(short, long)]
     pub block: Option<u64>,
@@ -29,7 +30,7 @@ pub struct InspectArgs {
 pub struct ProfileArgs {
     /// The address to make a profile for
     #[arg(short, long)]
-    pub address: String,
+    pub address: Address,
     /// Brief profiling of the address
     #[arg(short, long)]
     pub brief: bool,

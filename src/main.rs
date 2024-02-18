@@ -11,12 +11,18 @@ async fn main() -> eyre::Result<()> {
         .filter_level(LevelFilter::Trace)
         .init();
 
-    // Initialize a new Http provider
-    let rpc_url = "";
-    let provider = Provider::try_from(rpc_url)?;
+    let provider: Provider<Http>;
+
+    if let Some(rpc) = std::env::var("RPC_HTTP").ok() {
+        provider = Provider::try_from(rpc)?;
+    } else {
+        println!("PATH environment variable is not set");
+    }
+
     let args = CliArgs::parse();
     let cli = Cli::new(args);
-    if let Err(err) = cli.exec() {
+
+    if let Err(err) = cli.exec().await {
         eprintln!("Error {}", err);
         std::process::exit(1);
     }
