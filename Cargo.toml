@@ -6,3 +6,4 @@ description = "A CLI blockchain explorer compatible with EVM-supporting chains."
 
 [dependencies]
 clap = { version = "4.5.0", features = ["derive"] }
+anyhow = "1.0.79"

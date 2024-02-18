@@ -1,8 +1,7 @@
-use crate::args::Args;
-use crate::cli::Cli;
-
+use trill::args::CliArgs;
+use trill::cli::Cli;
 
 fn main() {
-    let args = Args::parse();
+    let args = CliArgs::parse();
     let cli = Cli::new(args);
 }

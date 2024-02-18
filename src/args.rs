@@ -1,36 +1,36 @@
-use clap::{Parser, Subcommand, Args};
+use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)] // Read from `Cargo.toml`
-pub struct Args {
+pub struct CliArgs {
     #[command(subcommand)]
-    commands: Commands,
+    pub commands: Commands,
 }
 
 #[derive(Subcommand)]
-enum Commands {
+pub enum Commands {
     /// Inspect tool for examining transactions and blocks
     Inspect(InspectArgs),
     /// Profile tool for making profiles of transactions and blocks
-    Profile(ProfileArgs)
+    Profile(ProfileArgs),
 }
 
 #[derive(Args)]
-struct InspectArgs {
+pub struct InspectArgs {
     /// The transaction hash to inspect
     #[arg(short, long)]
     transaction: Option<String>,
     /// The block number to inspect
     #[arg(short, long)]
-    block: Option<u64>
+    block: Option<u64>,
 }
 
 #[derive(Args)]
-struct ProfileArgs {
+pub struct ProfileArgs {
     /// The address to make a profile for
     #[arg(short, long)]
     address: String,
     /// Brief profiling of the address
     #[arg(short, long)]
-    brief: bool
+    brief: bool,
 }

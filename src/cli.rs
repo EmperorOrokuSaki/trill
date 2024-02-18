@@ -1,19 +1,21 @@
-use crate::args::{Args, Commands};
+use anyhow::Result;
+
+use crate::args::{CliArgs, Commands};
 use crate::commands::{inspect, profile};
 
-struct Cli {
-    args: Args
+pub struct Cli {
+    args: CliArgs,
 }
 
 impl Cli {
-    pub fn new(args: Args) -> Self {
-        Self { Args }
+    pub fn new(args: CliArgs) -> Self {
+        Self { args }
     }
 
     pub fn exec(self) -> Result<()> {
         match self.args.commands {
-            Commands::Inspect => inspect::exec(),
-            Commands::Profile => profile::exec(),
+            Commands::Inspect(_) => inspect::exec(),
+            Commands::Profile(_) => profile::exec(),
         }
     }
 }
