@@ -15,22 +15,22 @@ pub enum Commands {
     Profile(ProfileArgs),
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct InspectArgs {
     /// The transaction hash to inspect
     #[arg(short, long)]
-    transaction: Option<String>,
+    pub transaction: Option<String>,
     /// The block number to inspect
     #[arg(short, long)]
-    block: Option<u64>,
+    pub block: Option<u64>,
 }
 
 #[derive(Args)]
 pub struct ProfileArgs {
     /// The address to make a profile for
     #[arg(short, long)]
-    address: String,
+    pub address: String,
     /// Brief profiling of the address
     #[arg(short, long)]
-    brief: bool,
+    pub brief: bool,
 }

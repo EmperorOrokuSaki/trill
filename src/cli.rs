@@ -1,4 +1,6 @@
-use anyhow::Result;
+use clap::Parser;
+use eyre::Result;
+use log::info;
 
 use crate::args::{CliArgs, Commands};
 use crate::commands::{inspect, profile};
@@ -12,10 +14,16 @@ impl Cli {
         Self { args }
     }
 
+    pub fn parse() -> Self {
+        Self {
+            args: CliArgs::parse(),
+        }
+    }
+
     pub fn exec(self) -> Result<()> {
         match self.args.commands {
-            Commands::Inspect(_) => inspect::exec(),
-            Commands::Profile(_) => profile::exec(),
+            Commands::Inspect(args) => inspect::exec(args),
+            Commands::Profile(args) => profile::exec(args),
         }
     }
 }
