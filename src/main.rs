@@ -1,6 +1,5 @@
 use clap::Parser;
-use ethers::providers::{Http, Middleware, Provider};
-use log::{info, LevelFilter};
+use log::LevelFilter;
 use trill::args::CliArgs;
 use trill::cli::Cli;
 
@@ -10,14 +9,6 @@ async fn main() -> eyre::Result<()> {
     env_logger::builder()
         .filter_level(LevelFilter::Trace)
         .init();
-
-    let provider: Provider<Http>;
-
-    if let Some(rpc) = std::env::var("RPC_HTTP").ok() {
-        provider = Provider::try_from(rpc)?;
-    } else {
-        println!("PATH environment variable is not set");
-    }
 
     let args = CliArgs::parse();
     let cli = Cli::new(args);

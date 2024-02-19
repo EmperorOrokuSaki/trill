@@ -1,6 +1,5 @@
 use clap::Parser;
 use eyre::Result;
-use log::info;
 
 use crate::args::{CliArgs, Commands};
 use crate::commands::{inspect, profile};
