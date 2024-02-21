@@ -1,3 +1,4 @@
+use ethers::prelude;
 use ethers::{
     core::types::TxHash,
     prelude::Middleware,
@@ -17,14 +18,20 @@ pub async fn exec(args: InspectArgs) -> Result<()> {
 
 pub async fn inspect_transaction(tx_id: TxHash) -> Result<()> {
     let provider = create_provider()?;
-    let a = provider.get_transaction(tx_id).await?;
-    log::info!("{:?}", a);
+    let transaction : prelude::Transaction = match provider.get_transaction(tx_id).await? {
+        Some(transaction) => transaction,
+        None => return Err(eyre!("This transaction hash does not exist.")),
+    };
+    log::info!("{:?}", transaction);
     Ok(())
 }
 
 pub async fn inspect_block(block_number: u64) -> Result<()> {
     let provider = create_provider().unwrap();
-    let a = provider.get_block(block_number).await?.unwrap();
-    log::info!("{:?}", a.author);
+    let block : prelude::Block<TxHash> = match provider.get_block(block_number).await? {
+        Some(block) => block,
+        None => return Err(eyre!("This block number does not exist.")),
+    };
+    log::info!("{:?}", block);
     Ok(())
 }
