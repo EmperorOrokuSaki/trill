@@ -5,8 +5,8 @@ edition = "2021"
 description = "A CLI blockchain explorer compatible with EVM-supporting chains."
 
 [dependencies]
-cursive = "0.20.0"
-# Flexible concrete Error Reporting type built on std::error::Error with customizable Reports
-eyre = "0.6.12"
+crossterm = "0.27.0"
+ratatui = "0.26.0"# Flexible concrete Error Reporting type built on std::error::Error with customizable Reports
 log = "0.4"
 env_logger = "0.9"
+color-eyre = "0.6.3"
