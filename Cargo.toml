@@ -5,11 +5,7 @@ edition = "2021"
 description = "A CLI blockchain explorer compatible with EVM-supporting chains."
 
 [dependencies]
-clap = { version = "4.5.0", features = ["derive"] }
-# Ethers-rs HTTP version
-ethers = { version = "2.0", features = ["rustls"] }
-# Ethers' async features rely upon the Tokio async runtime.
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+cursive = "0.20.0"
 # Flexible concrete Error Reporting type built on std::error::Error with customizable Reports
 eyre = "0.6.12"
 log = "0.4"
