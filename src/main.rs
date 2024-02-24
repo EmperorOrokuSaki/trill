@@ -8,9 +8,9 @@ use ratatui::{
     widgets::{block::*, *},
 };
 
+mod app;
 mod error;
 mod tui;
-mod app;
 
 use color_eyre::{
     eyre::{bail, WrapErr},

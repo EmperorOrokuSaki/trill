@@ -1,10 +1,16 @@
 use std::io;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{prelude::*, symbols::border, widgets::{block::{Position, Title}, Block, Borders, Cell, Row, Table, TableState}};
+use ratatui::{
+    prelude::*,
+    symbols::border,
+    widgets::{
+        block::{Position, Title},
+        Block, Borders, Cell, Row, Table, TableState,
+    },
+};
 
 use crate::tui;
-
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -13,7 +19,6 @@ pub struct App {
 }
 
 impl App {
-
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<()> {
         while !self.exit {
@@ -63,20 +68,20 @@ impl StatefulWidget for &App {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut i32) {
         let mut rows: Vec<Row> = Vec::new();
 
-for k in 1..9 {
-    let mut row = Vec::<Cell>::new();
-    for i in 1..101 {
-        if (i + k) % 2 == 0 {
-            // even
-            row.push(Cell::new("■").style(Style::new().red()));
-        } else if (i + k) % 3 == 0 {
-            row.push(Cell::new("■").style(Style::new().blue()));
-        } else {
-            row.push(Cell::new("■").style(Style::new().white()));
+        for k in 1..9 {
+            let mut row = Vec::<Cell>::new();
+            for i in 1..101 {
+                if (i + k) % 2 == 0 {
+                    // even
+                    row.push(Cell::new("■").style(Style::new().red()));
+                } else if (i + k) % 3 == 0 {
+                    row.push(Cell::new("■").style(Style::new().blue()));
+                } else {
+                    row.push(Cell::new("■").style(Style::new().white()));
+                }
+            }
+            rows.push(Row::new(row));
         }
-    }
-    rows.push(Row::new(row));
-}
 
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
@@ -102,8 +107,13 @@ for k in 1..9 {
             self.counter.to_string().yellow(),
         ])]);
         let mut s = TableState::default();
-        ratatui::widgets::StatefulWidget::render(Table::new(rows, [Constraint::Length(1); 100]).block(block), area, buf, &mut s);
-        }
-    
+        ratatui::widgets::StatefulWidget::render(
+            Table::new(rows, [Constraint::Length(1); 100]).block(block),
+            area,
+            buf,
+            &mut s,
+        );
+    }
+
     type State = i32;
 }
