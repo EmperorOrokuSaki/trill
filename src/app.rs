@@ -1,6 +1,6 @@
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, KeyCode::{self, Char}, KeyEvent, KeyEventKind};
 use ratatui::{
     prelude::*,
     symbols::border,
@@ -10,7 +10,7 @@ use ratatui::{
     },
 };
 
-use crate::tui;
+use crate::{events::{self, Event}, tui};
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -20,10 +20,12 @@ pub struct App {
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<()> {
+    pub async fn run(&mut self, terminal: &mut tui::Tui) -> color_eyre::Result<()> {
+        let mut events = events::EventHandler::new();
         while !self.exit {
+            let event = events.next().await?; // new
+            self.handle_events(event)?;
             terminal.draw(|frame| self.render_frame(frame))?;
-            self.handle_events()?;
         }
         Ok(())
     }
@@ -32,16 +34,14 @@ impl App {
         frame.render_stateful_widget(self, frame.size(), &mut 0);
     }
 
-    fn handle_events(&mut self) -> io::Result<()> {
-        match event::read()? {
-            // it's important to check that the event is a key press event as
-            // crossterm also emits key release and repeat events on Windows.
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event)
+    fn handle_events(&mut self, event: Event) -> io::Result<()> {
+        if let Event::Key(key) = event {
+            match key.code {
+              Char('q') => self.exit = true,
+              _ => {},
             }
-            _ => {}
-        };
-        Ok(())
+          }
+          Ok(())
     }
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
@@ -65,7 +65,16 @@ impl App {
 }
 
 impl StatefulWidget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut i32) {
+    async fn render(self, area: Rect, buf: &mut Buffer, state: &mut i32) {
+        let rpc_url = "https://eth-mainnet.g.alchemy.com/v2/4ABGG1Lptm7SpbTWPzLxXuexe3BiXjB_";
+        let provider = ProviderBuilder::new().on_builtin(rpc_url).await?;
+    
+        // Get storage slot 0 from the Uniswap V3 USDC-ETH pool on Ethereum mainnet.
+        let pool_address = address!("88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640");
+        let storage_slot = U256::from(0);
+        let storage = provider.get_storage_at(pool_address, storage_slot, None).await?;
+    
+        dbg!(storage);
         let mut rows: Vec<Row> = Vec::new();
 
         for k in 1..9 {
@@ -102,10 +111,6 @@ impl StatefulWidget for &App {
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Value: ".into(),
-            self.counter.to_string().yellow(),
-        ])]);
         let mut s = TableState::default();
         ratatui::widgets::StatefulWidget::render(
             Table::new(rows, [Constraint::Length(1); 100]).block(block),
