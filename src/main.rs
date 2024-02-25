@@ -1,4 +1,7 @@
 use std::io;
+mod provider;
+mod tui;
+mod app;
 
 use app::App;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -7,10 +10,6 @@ use ratatui::{
     symbols::border,
     widgets::{block::*, *},
 };
-
-mod app;
-mod error;
-mod tui;
 
 use alloy::{
     primitives::{address, U256},
