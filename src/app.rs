@@ -1,6 +1,10 @@
 use std::io;
 
-use crossterm::event::{self, KeyCode::{self, Char}, KeyEvent, KeyEventKind};
+use alloy::{primitives::{address, U256}, providers::{Provider, ProviderBuilder}};
+use color_eyre::eyre::eyre;
+use crossterm::event::{
+    KeyCode::{ Char},
+};
 use ratatui::{
     prelude::*,
     symbols::border,
@@ -10,7 +14,7 @@ use ratatui::{
     },
 };
 
-use crate::{events::{self, Event}, tui};
+use crate::tui::{self, Event};
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -20,13 +24,40 @@ pub struct App {
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub async fn run(&mut self, terminal: &mut tui::Tui) -> color_eyre::Result<()> {
-        let mut events = events::EventHandler::new();
-        while !self.exit {
-            let event = events.next().await?; // new
-            self.handle_events(event)?;
-            terminal.draw(|frame| self.render_frame(frame))?;
+    pub async fn run(&mut self) -> color_eyre::Result<()> {
+        let mut tui = tui::Tui::new()?
+            .tick_rate(4.0) // 4 ticks per second
+            .frame_rate(30.0); // 30 frames per second
+
+        tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
+
+        loop {
+            // Get storage slot 0 from the Uniswap V3 USDC-ETH pool on Ethereum mainnet.
+            let pool_address = address!("88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640");
+            let storage_slot = U256::from(0);
+            let storage = provider
+                .get_storage_at(pool_address, storage_slot, None)
+                .await?;
+    
+            dbg!(storage);
+ 
+            tui.draw(|f| {
+                // Deref allows calling `tui.terminal.draw`
+                self.render_frame(f);
+            })?;
+
+            if let Some(evt) = tui.next().await {
+                // `tui.next().await` blocks till next event
+                self.handle_event(evt)?;
+            };
+
+            if self.exit {
+                break;
+            }
         }
+
+        tui.exit()?; // stops event handler, exits raw mode, exits alternate screen
+
         Ok(())
     }
 
@@ -34,23 +65,16 @@ impl App {
         frame.render_stateful_widget(self, frame.size(), &mut 0);
     }
 
-    fn handle_events(&mut self, event: Event) -> io::Result<()> {
+    fn handle_event(&mut self, event: Event) -> io::Result<()> {
         if let Event::Key(key) = event {
             match key.code {
-              Char('q') => self.exit = true,
-              _ => {},
+                Char('q') => self.exit = true,
+                _ => {}
             }
-          }
-          Ok(())
-    }
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            KeyCode::Left => self.decrement_counter(),
-            KeyCode::Right => self.increment_counter(),
-            _ => {}
         }
+        Ok(())
     }
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -65,16 +89,7 @@ impl App {
 }
 
 impl StatefulWidget for &App {
-    async fn render(self, area: Rect, buf: &mut Buffer, state: &mut i32) {
-        let rpc_url = "https://eth-mainnet.g.alchemy.com/v2/4ABGG1Lptm7SpbTWPzLxXuexe3BiXjB_";
-        let provider = ProviderBuilder::new().on_builtin(rpc_url).await?;
-    
-        // Get storage slot 0 from the Uniswap V3 USDC-ETH pool on Ethereum mainnet.
-        let pool_address = address!("88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640");
-        let storage_slot = U256::from(0);
-        let storage = provider.get_storage_at(pool_address, storage_slot, None).await?;
-    
-        dbg!(storage);
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut i32) {
         let mut rows: Vec<Row> = Vec::new();
 
         for k in 1..9 {

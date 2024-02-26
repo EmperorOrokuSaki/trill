@@ -1,5 +1,4 @@
-mod error;
-mod events;
-mod tui;
 mod app;
+mod error;
+mod tui;
 mod types;

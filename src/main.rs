@@ -23,9 +23,7 @@ use color_eyre::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    error::install_hooks()?;
-    let mut terminal = tui::init()?;
-    App::default().run(&mut terminal)?;
-    tui::restore()?;
+    // error::install_hooks()?;
+    App::default().run().await?;
     Ok(())
 }
