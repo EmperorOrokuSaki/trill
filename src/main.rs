@@ -1,7 +1,7 @@
 use std::io;
+mod app;
 mod provider;
 mod tui;
-mod app;
 
 use app::App;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
