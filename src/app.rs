@@ -5,8 +5,16 @@ use crate::{
     tui::{self, Event},
 };
 use alloy::{
-    primitives::{address, U256},
-    providers::{Provider, ProviderBuilder},
+    hex::FromHex,
+    primitives::{address, b256, B256, U256},
+    providers::Provider,
+    rpc::types::trace::{
+        self,
+        geth::{
+            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions,
+            GethDefaultTracingOptions,
+        },
+    },
 };
 use color_eyre::eyre::{self, eyre};
 use crossterm::event::KeyCode::Char;
@@ -32,34 +40,56 @@ impl AppState {
     async fn run() -> Result<AppState, eyre::Error> {
         let mut data: Vec<U256> = vec![];
         let provider = provider::HTTPProvider::new().await?;
-        let pool_address = address!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-        let method_name = std::borrow::Cow::from("eth_call");
 
-        let batch_a: Vec<String> = (0..1000)
-            .map(|pos| format!("{:0>64X}", pos)) // Format each number as a hexadecimal string with leading zeros
-            .collect();
+        // Trace with built-in call tracer.
+        // let call_options = GethDebugTracingOptions {
+        //     tracer: Some(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer)),
+        //     tracer_config: trace::geth::GethDebugTracerConfig(serde_json::json!({"onlyTopCall": true})),
+        //     timeout: Some(String::from("10s")),
+        // };
+        let hash =
+            B256::from_hex("0xa49d791f8c6ec598e496aaecf7a4211ce6ecf9d6149d4b2853d2a4c13dc763de")?;
 
-        let calldata: String = "0x".to_owned() + &batch_a.join("");
-
-        let batch = provider
-            .raw_request(
-                method_name,
-                serde_json::json!([
-                    {
-                        "to": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                        "data": calldata
-                    },
-                    "latest",
-                    {
-                        "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
-                            "code": "0x5f5b80361460135780355481526020016001565b365ff3"
-                        }
-                    }
-                ]),
-            )
+            // let result = provider.debug_trace_transaction(hash, )
+        let result = provider
+            .raw_request(std::borrow::Cow::Borrowed("debug_traceTransaction"), ("0x8fc90a6c3ee3001cdcbbb685b4fbe67b1fa2bec575b15b0395fea5540d0901ae", serde_json::json!({
+                "tracer":"callTracer",
+                "tracerConfig":{
+                "onlyTopCall":true
+                },
+                "timeout":"5s"
+                })
+            ))
             .await?;
-        dbg!(batch);
-        for slot in 0..1000 {
+        dbg!(result);
+        let pool_address = address!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+        // let method_name = std::borrow::Cow::from("eth_call");
+
+        // let batch_a: Vec<String> = (0..9)
+        //     .map(|pos| format!("{:0>64X}", pos)) // Format each number as a hexadecimal string with leading zeros
+        //     .collect();
+
+        // let calldata: String = "0x".to_owned() + &batch_a.join("");
+
+        // let batch = provider
+        //     .raw_request(
+        //         method_name,
+        //         serde_json::json!([
+        //             {
+        //                 "to": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        //                 "data": calldata
+        //             },
+        //             "latest",
+        //             {
+        //                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
+        //                     "code": "0x5f5b80361460135780355481526020016001565b365ff3"
+        //                 }
+        //             }
+        //         ]),
+        //     )
+        //     .await?;
+        // dbg!(batch);
+        for slot in 0..19 {
             let storage_slot = U256::from(slot);
             let storage = provider
                 .get_storage_at(pool_address, storage_slot, None)

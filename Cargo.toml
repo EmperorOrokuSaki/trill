@@ -14,6 +14,7 @@ alloy = { git = "https://github.com/alloy-rs/alloy", rev = "89f14f9", features =
     "contract",
     "providers",
     "provider-http",
+    "rpc-types-trace"
 ] }
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-util = "0.7.10"
