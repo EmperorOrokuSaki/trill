@@ -41,7 +41,7 @@ impl Default for App {
 pub struct AppState {
     slots: Vec<SlotStatus>,
     indexed_slots_count: u64,
-    next_slot: u64,
+    next_operation: u64,
     next_slot_status: SlotStatus,
     raw_data: Vec<StructLog>,
     initialized: bool,
@@ -52,7 +52,7 @@ impl Default for AppState {
         Self {
             slots: vec![],
             indexed_slots_count: 0,
-            next_slot: 0,
+            next_operation: 0,
             next_slot_status: SlotStatus::INIT,
             raw_data: vec![],
             initialized: false,
@@ -117,13 +117,13 @@ impl AppState {
             self.initialize().await?;
         }
 
-        let mut range_ending = self.next_slot + iteration;
+        let mut range_ending = self.next_operation + iteration;
 
         if range_ending > self.raw_data.len() as u64 {
             range_ending = self.raw_data.len() as u64;
         }
 
-        for operation_number in self.next_slot..range_ending {
+        for operation_number in self.next_operation..range_ending {
             let operation = &self.raw_data[operation_number as usize];
 
             if operation.memory.is_some() {
@@ -143,7 +143,7 @@ impl AppState {
             }
         }
 
-        self.next_slot = range_ending;
+        self.next_operation = range_ending;
 
         Ok(self)
     }
