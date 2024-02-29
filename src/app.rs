@@ -11,8 +11,8 @@ use alloy::{
     rpc::types::trace::{
         self,
         geth::{
-            CallConfig, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions,
-            GethDefaultTracingOptions, GethTrace,
+            CallConfig, DefaultFrame, GethDebugBuiltInTracerType, GethDebugTracerType,
+            GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace, StructLog,
         },
     },
 };
@@ -26,6 +26,7 @@ use ratatui::{
         Block, Borders, Cell, Row, Table, TableState,
     },
 };
+use serde::Serialize;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -33,13 +34,33 @@ pub struct App {
 }
 
 pub struct AppState {
-    data: Vec<U256>,
+    slots: Vec<SlotStatus>,
+    next_slot: u64,
+    raw_data: Vec<StructLog>,
+    initialized: bool,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            slots: vec![],
+            next_slot: 0,
+            raw_data: vec![],
+            initialized: false,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum SlotStatus {
+    EMPTY,
+    ACTIVE,
+    READING,
+    WRITING,
 }
 
 impl AppState {
-    async fn run() -> Result<AppState, eyre::Error> {
-        let data: Vec<U256> = vec![];
-        println!("HE");
+    async fn initialize(&mut self) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
         let opts = GethDebugTracingOptions {
             config: GethDefaultTracingOptions {
@@ -62,18 +83,33 @@ impl AppState {
                 opts,
             )
             .await?;
-
         match result {
             GethTrace::JS(context) => {
-                let result_json =
-                    serde_json::to_string(&context).expect("Failed to serialize result to JSON");
-
-                // Write the JSON string to a file named "result.json"
-                std::fs::write("result.json", result_json).expect("Failed to write to file");
+                //std::fs::write("result.json", context.to_string()).expect("Failed to write to file");
+                self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
             }
             _ => (),
         }
-        Ok(Self { data: data })
+        self.initialized = true;
+        Ok(())
+    }
+
+    async fn run(mut self) -> Result<Self, eyre::Error> {
+        if !self.initialized {
+            self.initialize().await?;
+        }
+
+        for operation_number in self.next_slot as usize..self.raw_data.len() {
+            let operation = &self.raw_data[operation_number];
+            if operation.memory.is_some() {
+                let memory = operation.memory.as_ref().unwrap();
+                for _ in 0..memory.len() {
+                    self.slots.push(SlotStatus::ACTIVE);
+                }
+            }
+        }
+
+        Ok(self)
     }
 }
 
@@ -85,11 +121,12 @@ impl App {
             .frame_rate(1.0); // 30 frames per second
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
-        let mut state = AppState::run().await?;
+        let mut app_state = AppState::default();
         loop {
+            app_state = AppState::run(app_state).await?;
             tui.draw(|f| {
                 // Deref allows calling `tui.terminal.draw`
-                self.render_frame(f, &mut state);
+                self.render_frame(f, &mut app_state);
             })?;
 
             if let Some(evt) = tui.next().await {
@@ -146,11 +183,12 @@ impl StatefulWidget for &App {
         let mut s = TableState::default();
         let mut rows: Vec<Row> = vec![];
         let mut row: Vec<Cell> = vec![];
-        for slot in 0..1000 {
-            if state.data[slot] == U256::from(0) {
-                row.push(Cell::new("■").style(Style::new().blue()));
-            } else {
-                row.push(Cell::new("■").style(Style::new().red()));
+        for slot in 0..state.data.len() {
+            match state.data[slot] {
+                SlotStatus::EMPTY => row.push(Cell::new("■").style(Style::new().gray())),
+                SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
+                SlotStatus::READING => row.push(Cell::new("■").style(Style::new().blue())),
+                SlotStatus::WRITING => row.push(Cell::new("■").style(Style::new().red())),
             }
             if slot % 100 == 99 {
                 rows.push(Row::new(row.clone()));
