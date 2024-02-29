@@ -10,12 +10,12 @@ pub struct HTTPProvider {
 
 impl HTTPProvider {
     pub async fn new() -> Result<RootProvider<BoxTransport>, eyre::Error> {
-        if let Some(rpc) = std::env::var("RPC_HTTP").ok() {
-            match ProviderBuilder::new().on_builtin(&rpc).await {
-                Ok(provider) => return Ok(provider),
-                Err(error) => return Err(eyre!(error)),
-            }
+        match ProviderBuilder::new()
+            .on_builtin("http://127.0.0.1:8545")
+            .await
+        {
+            Ok(provider) => return Ok(provider),
+            Err(error) => return Err(eyre!(error)),
         }
-        Err(eyre!("the RPC_HTTP env var is not set"))
     }
 }

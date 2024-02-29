@@ -16,6 +16,7 @@ run() {
 
     contract=$(cast send --json --unlocked --from $acc --create $code | jq -r '.contractAddress')
     hash=$(cast send --json --unlocked --from $acc "$contract" "setNumbers(uint256[])" "[$data]" | jq -r '.transactionHash')
+    echo $hash
     cast rpc debug_traceTransaction "$hash" '{"enableMemory":true, "disableStack": true}' | jq > resp.json
 }
 

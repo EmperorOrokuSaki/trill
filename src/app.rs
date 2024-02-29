@@ -6,13 +6,13 @@ use crate::{
 };
 use alloy::{
     hex::FromHex,
-    primitives::{address, b256, B256, U256},
+    primitives::{address, b256, fixed_bytes, B256, U256},
     providers::Provider,
     rpc::types::trace::{
         self,
         geth::{
-            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions,
-            GethDefaultTracingOptions,
+            CallConfig, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions,
+            GethDefaultTracingOptions, GethTrace,
         },
     },
 };
@@ -38,63 +38,40 @@ pub struct AppState {
 
 impl AppState {
     async fn run() -> Result<AppState, eyre::Error> {
-        let mut data: Vec<U256> = vec![];
+        let data: Vec<U256> = vec![];
+        println!("HE");
         let provider = provider::HTTPProvider::new().await?;
-
-        // Trace with built-in call tracer.
-        // let call_options = GethDebugTracingOptions {
-        //     tracer: Some(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer)),
-        //     tracer_config: trace::geth::GethDebugTracerConfig(serde_json::json!({"onlyTopCall": true})),
-        //     timeout: Some(String::from("10s")),
-        // };
-        let hash =
-            B256::from_hex("0xa49d791f8c6ec598e496aaecf7a4211ce6ecf9d6149d4b2853d2a4c13dc763de")?;
-
-            // let result = provider.debug_trace_transaction(hash, )
+        let opts = GethDebugTracingOptions {
+            config: GethDefaultTracingOptions {
+                enable_memory: Some(true),
+                disable_memory: None,
+                disable_stack: Some(true),
+                disable_storage: Some(true),
+                enable_return_data: Some(false),
+                disable_return_data: None,
+                debug: None,
+                limit: None,
+            },
+            tracer: None,
+            tracer_config: trace::geth::GethDebugTracerConfig(serde_json::Value::Null),
+            timeout: None,
+        };
         let result = provider
-            .raw_request(std::borrow::Cow::Borrowed("debug_traceTransaction"), ("0x8fc90a6c3ee3001cdcbbb685b4fbe67b1fa2bec575b15b0395fea5540d0901ae", serde_json::json!({
-                "tracer":"callTracer",
-                "tracerConfig":{
-                "onlyTopCall":true
-                },
-                "timeout":"5s"
-                })
-            ))
+            .debug_trace_transaction(
+                fixed_bytes!("52ac113a9ad810a0af4e23c656ea7bfbcb43b1cac933befb02a23d7f75283fc7"),
+                opts,
+            )
             .await?;
-        dbg!(result);
-        let pool_address = address!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-        // let method_name = std::borrow::Cow::from("eth_call");
 
-        // let batch_a: Vec<String> = (0..9)
-        //     .map(|pos| format!("{:0>64X}", pos)) // Format each number as a hexadecimal string with leading zeros
-        //     .collect();
+        match result {
+            GethTrace::JS(context) => {
+                let result_json =
+                    serde_json::to_string(&context).expect("Failed to serialize result to JSON");
 
-        // let calldata: String = "0x".to_owned() + &batch_a.join("");
-
-        // let batch = provider
-        //     .raw_request(
-        //         method_name,
-        //         serde_json::json!([
-        //             {
-        //                 "to": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        //                 "data": calldata
-        //             },
-        //             "latest",
-        //             {
-        //                 "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": {
-        //                     "code": "0x5f5b80361460135780355481526020016001565b365ff3"
-        //                 }
-        //             }
-        //         ]),
-        //     )
-        //     .await?;
-        // dbg!(batch);
-        for slot in 0..19 {
-            let storage_slot = U256::from(slot);
-            let storage = provider
-                .get_storage_at(pool_address, storage_slot, None)
-                .await?;
-            data.push(storage);
+                // Write the JSON string to a file named "result.json"
+                std::fs::write("result.json", result_json).expect("Failed to write to file");
+            }
+            _ => (),
         }
         Ok(Self { data: data })
     }
