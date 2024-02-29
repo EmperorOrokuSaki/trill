@@ -32,12 +32,11 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            iteration: 1,
-            exit: false
+            iteration: 5,
+            exit: false,
         }
     }
 }
-
 
 pub struct AppState {
     slots: Vec<SlotStatus>,
@@ -57,7 +56,7 @@ impl Default for AppState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SlotStatus {
     EMPTY,
     ACTIVE,
@@ -105,14 +104,14 @@ impl AppState {
             self.initialize().await?;
         }
 
-        let mut range_ending = (self.next_slot + iteration) as usize;
+        let mut range_ending = self.next_slot + iteration;
 
-        if range_ending > self.raw_data.len() {
-            range_ending = self.raw_data.len();
+        if range_ending > self.raw_data.len() as u64 {
+            range_ending = self.raw_data.len() as u64;
         }
 
-        for operation_number in self.next_slot as usize..range_ending {
-            let operation = &self.raw_data[operation_number];
+        for operation_number in self.next_slot..range_ending {
+            let operation = &self.raw_data[operation_number as usize];
             if operation.memory.is_some() {
                 let memory = operation.memory.as_ref().unwrap();
                 for _ in 0..memory.len() {
@@ -120,6 +119,8 @@ impl AppState {
                 }
             }
         }
+
+        self.next_slot = range_ending;
 
         Ok(self)
     }
@@ -136,13 +137,14 @@ impl App {
         let mut app_state = AppState::default();
         loop {
             app_state = AppState::run(app_state, self.iteration).await?;
+
             tui.draw(|f| {
-                // Deref allows calling `tui.terminal.draw`
+                // Deref allows calling tui.terminal.draw
                 self.render_frame(f, &mut app_state);
             })?;
 
             if let Some(evt) = tui.next().await {
-                // `tui.next().await` blocks till next event
+                // tui.next().await blocks till next event
                 self.handle_event(evt)?;
             };
 
