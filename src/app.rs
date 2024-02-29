@@ -5,15 +5,11 @@ use crate::{
     tui::{self, Event},
 };
 use alloy::{
-    hex::FromHex,
-    primitives::{address, b256, fixed_bytes, B256, U256},
+    primitives::fixed_bytes,
     providers::Provider,
     rpc::types::trace::{
         self,
-        geth::{
-            CallConfig, DefaultFrame, GethDebugBuiltInTracerType, GethDebugTracerType,
-            GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace, StructLog,
-        },
+        geth::{GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace, StructLog},
     },
 };
 use color_eyre::eyre::{self, eyre};
@@ -26,12 +22,22 @@ use ratatui::{
         Block, Borders, Cell, Row, Table, TableState,
     },
 };
-use serde::Serialize;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct App {
+    iteration: u64,
     exit: bool,
 }
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            iteration: 1,
+            exit: false
+        }
+    }
+}
+
 
 pub struct AppState {
     slots: Vec<SlotStatus>,
@@ -94,12 +100,18 @@ impl AppState {
         Ok(())
     }
 
-    async fn run(mut self) -> Result<Self, eyre::Error> {
+    async fn run(mut self, iteration: u64) -> Result<Self, eyre::Error> {
         if !self.initialized {
             self.initialize().await?;
         }
 
-        for operation_number in self.next_slot as usize..self.raw_data.len() {
+        let mut range_ending = (self.next_slot + iteration) as usize;
+
+        if range_ending > self.raw_data.len() {
+            range_ending = self.raw_data.len();
+        }
+
+        for operation_number in self.next_slot as usize..range_ending {
             let operation = &self.raw_data[operation_number];
             if operation.memory.is_some() {
                 let memory = operation.memory.as_ref().unwrap();
@@ -123,7 +135,7 @@ impl App {
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
         loop {
-            app_state = AppState::run(app_state).await?;
+            app_state = AppState::run(app_state, self.iteration).await?;
             tui.draw(|f| {
                 // Deref allows calling `tui.terminal.draw`
                 self.render_frame(f, &mut app_state);
@@ -183,8 +195,8 @@ impl StatefulWidget for &App {
         let mut s = TableState::default();
         let mut rows: Vec<Row> = vec![];
         let mut row: Vec<Cell> = vec![];
-        for slot in 0..state.data.len() {
-            match state.data[slot] {
+        for slot in 0..state.slots.len() {
+            match state.slots[slot] {
                 SlotStatus::EMPTY => row.push(Cell::new("■").style(Style::new().gray())),
                 SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
                 SlotStatus::READING => row.push(Cell::new("■").style(Style::new().blue())),
