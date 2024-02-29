@@ -40,7 +40,9 @@ impl Default for App {
 
 pub struct AppState {
     slots: Vec<SlotStatus>,
+    indexed_slots_count: u64,
     next_slot: u64,
+    next_slot_status: SlotStatus,
     raw_data: Vec<StructLog>,
     initialized: bool,
 }
@@ -49,15 +51,18 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             slots: vec![],
+            indexed_slots_count: 0,
             next_slot: 0,
+            next_slot_status: SlotStatus::INIT,
             raw_data: vec![],
             initialized: false,
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SlotStatus {
+    INIT,
     EMPTY,
     ACTIVE,
     READING,
@@ -73,8 +78,8 @@ impl AppState {
                 disable_memory: None,
                 disable_stack: Some(true),
                 disable_storage: Some(true),
-                enable_return_data: Some(false),
-                disable_return_data: None,
+                enable_return_data: Some(true),
+                disable_return_data: Some(false),
                 debug: None,
                 limit: None,
             },
@@ -90,8 +95,16 @@ impl AppState {
             .await?;
         match result {
             GethTrace::JS(context) => {
-                //std::fs::write("result.json", context.to_string()).expect("Failed to write to file");
+                std::fs::write("result1.json", context.to_string())
+                    .expect("Failed to write to file");
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
+                self.slots = vec![
+                    SlotStatus::EMPTY;
+                    self.raw_data
+                        .iter()
+                        .filter(|operation| operation.memory.is_some())
+                        .count()
+                ];
             }
             _ => (),
         }
@@ -112,11 +125,21 @@ impl AppState {
 
         for operation_number in self.next_slot..range_ending {
             let operation = &self.raw_data[operation_number as usize];
+
             if operation.memory.is_some() {
                 let memory = operation.memory.as_ref().unwrap();
-                for _ in 0..memory.len() {
-                    self.slots.push(SlotStatus::ACTIVE);
+                let mut new_slots = 0;
+                if memory.len() as u64 > self.indexed_slots_count {
+                    new_slots = memory.len() as u64 - self.indexed_slots_count
                 }
+                for _ in 0..new_slots {
+                    self.slots[self.indexed_slots_count as usize] = self.next_slot_status;
+                    self.indexed_slots_count += 1;
+                }
+            }
+            match operation.op.as_str() {
+                "MSTORE" => self.next_slot_status = SlotStatus::WRITING,
+                _ => (),
             }
         }
 
@@ -203,6 +226,7 @@ impl StatefulWidget for &App {
                 SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
                 SlotStatus::READING => row.push(Cell::new("■").style(Style::new().blue())),
                 SlotStatus::WRITING => row.push(Cell::new("■").style(Style::new().red())),
+                SlotStatus::INIT => (),
             }
             if slot % 100 == 99 {
                 rows.push(Row::new(row.clone()));
