@@ -60,7 +60,7 @@ impl Default for AppState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SlotStatus {
     INIT,
     EMPTY,
@@ -89,7 +89,7 @@ impl AppState {
         };
         let result = provider
             .debug_trace_transaction(
-                fixed_bytes!("52ac113a9ad810a0af4e23c656ea7bfbcb43b1cac933befb02a23d7f75283fc7"),
+                fixed_bytes!("cd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546"),
                 opts,
             )
             .await?;
@@ -98,17 +98,19 @@ impl AppState {
                 std::fs::write("result1.json", context.to_string())
                     .expect("Failed to write to file");
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
-                self.slots = vec![
-                    SlotStatus::EMPTY;
-                    self.raw_data
-                        .iter()
-                        .filter(|operation| operation.memory.is_some())
-                        .count()
-                ];
-            }
-            _ => (),
+                let max_memory_length = self
+                    .raw_data
+                    .iter()
+                    .filter(|operation| operation.memory.is_some())
+                    .map(|operation| operation.memory.as_ref().unwrap().len())
+                    .max()
+                    .unwrap_or(0);
+                self.slots = vec![SlotStatus::EMPTY; max_memory_length];
+            },
+            _ => ()
         }
         self.initialized = true;
+
         Ok(())
     }
 
@@ -122,11 +124,17 @@ impl AppState {
         if range_ending > self.raw_data.len() as u64 {
             range_ending = self.raw_data.len() as u64;
         }
+        
+        for slot in &mut self.slots {
+            if *slot != SlotStatus::EMPTY && *slot != SlotStatus::ACTIVE {
+                *slot = SlotStatus::ACTIVE;
+            }
+        }
 
         for operation_number in self.next_operation..range_ending {
             let operation = &self.raw_data[operation_number as usize];
 
-            if operation.memory.is_some() {
+            if self.next_slot_status != SlotStatus::EMPTY {
                 let memory = operation.memory.as_ref().unwrap();
                 let mut new_slots = 0;
                 if memory.len() as u64 > self.indexed_slots_count {
@@ -139,7 +147,10 @@ impl AppState {
             }
             match operation.op.as_str() {
                 "MSTORE" => self.next_slot_status = SlotStatus::WRITING,
-                _ => (),
+                "MSTORE8" => self.next_slot_status = SlotStatus::WRITING,
+                "CALLDATACOPY" => self.next_slot_status = SlotStatus::WRITING,
+                "RETURNDATACOPY" => self.next_slot_status = SlotStatus::WRITING,
+                _ => self.next_slot_status = SlotStatus::EMPTY,
             }
         }
 
