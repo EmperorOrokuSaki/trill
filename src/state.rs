@@ -1,10 +1,10 @@
 use alloy::{
     primitives::fixed_bytes,
     providers::Provider,
-    rpc::types::trace::{
+    rpc::types::{eth::Transaction, trace::{
         self,
         geth::{GethDebugTracingOptions, GethDefaultTracingOptions, GethTrace, StructLog},
-    },
+    }},
 };
 use color_eyre::eyre;
 
@@ -18,6 +18,8 @@ pub struct AppState {
     pub operation_codes: Vec<Operations>,
     pub raw_data: Vec<StructLog>,
     pub initialized: bool,
+    pub transaction: Transaction,
+    pub transaction_sucess: bool,
 }
 
 impl Default for AppState {
@@ -30,6 +32,8 @@ impl Default for AppState {
             raw_data: vec![],
             initialized: false,
             operation_codes: vec![],
+            transaction: Transaction::default(),
+            transaction_sucess: false
         }
     }
 }
@@ -89,6 +93,10 @@ impl SlotStatus {
 impl AppState {
     async fn initialize(&mut self) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
+        let tx_hash = fixed_bytes!("cd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546");
+        let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
+        self.transaction = transaction_result;
+
         let opts = GethDebugTracingOptions {
             config: GethDefaultTracingOptions {
                 enable_memory: Some(true),
@@ -104,15 +112,17 @@ impl AppState {
             tracer_config: trace::geth::GethDebugTracerConfig(serde_json::Value::Null),
             timeout: None,
         };
+        
         let result = provider
             .debug_trace_transaction(
-                fixed_bytes!("cd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546"),
+                tx_hash,
                 opts,
             )
             .await?;
 
         match result {
             GethTrace::JS(context) => {
+                self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
                     .raw_data

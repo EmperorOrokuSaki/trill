@@ -1,3 +1,4 @@
+use alloy::primitives::Address;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -64,7 +65,7 @@ impl<'a> RenderData<'a> {
     }
 
     fn render_transaction_box(&mut self, layout: Rect) {
-        // TX INFO
+        let transaction = &self.state.transaction;
         let title = Title::from(" Transaction info ".bold());
         let tx_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
@@ -72,36 +73,36 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
         let tx_info_rows = vec![
             Row::new(vec![
-                Cell::new("Hash").style(Style::new().gray()),
-                Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
+                Cell::new("Hash").style(Style::new().gray().bold()),
+                Cell::new(transaction.hash.to_string())
                     .style(Style::new().gray()),
             ]),
             Row::new(vec![
-                Cell::new("From").style(Style::new().gray()),
-                Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
+                Cell::new("From").style(Style::new().gray().bold()),
+                Cell::new(transaction.from.to_string())
                     .style(Style::new().gray()),
             ]),
             Row::new(vec![
-                Cell::new("To").style(Style::new().gray()),
-                Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
+                Cell::new("To").style(Style::new().gray().bold()),
+                Cell::new(transaction.to.unwrap().to_string())
                     .style(Style::new().gray()),
             ]),
             Row::new(vec![
-                Cell::new("Block Hash").style(Style::new().gray()),
-                Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
+                Cell::new("Block Hash").style(Style::new().gray().bold()),
+                Cell::new(transaction.block_hash.unwrap().to_string())
                     .style(Style::new().gray()),
             ]),
             Row::new(vec![
-                Cell::new("Block Number").style(Style::new().gray()),
-                Cell::new("18554494").style(Style::new().gray()),
+                Cell::new("Block Number").style(Style::new().gray().bold()),
+                Cell::new(transaction.block_number.unwrap().to_string()).style(Style::new().gray()),
             ]),
             Row::new(vec![
-                Cell::new("Success").style(Style::new().gray()),
-                Cell::new("true").style(Style::new().green()),
+                Cell::new("Success").style(Style::new().gray().bold()),
+                Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().green()),
             ]),
             Row::new(vec![
-                Cell::new("Gas used").style(Style::new().gray()),
-                Cell::new("15556674152").style(Style::new().gray()),
+                Cell::new("Gas used").style(Style::new().gray().bold()),
+                Cell::new(transaction.gas.to_string()).style(Style::new().gray()),
             ]),
         ];
         let tx_info_table = Table::new(
