@@ -32,7 +32,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            iteration: 5,
+            iteration: 1,
             exit: false,
         }
     }
@@ -119,30 +119,37 @@ impl AppState {
             self.initialize().await?;
         }
 
-        let mut range_ending = self.next_operation + iteration;
+        //let mut range_ending = self.next_operation + iteration;
 
-        if range_ending > self.raw_data.len() as u64 {
-            range_ending = self.raw_data.len() as u64;
-        }
+        //if range_ending > self.raw_data.len() as u64 {
+            let mut range_ending = self.raw_data.len() as u64;
+        //}
         
         for slot in &mut self.slots {
             if *slot != SlotStatus::EMPTY && *slot != SlotStatus::ACTIVE {
                 *slot = SlotStatus::ACTIVE;
             }
         }
-
+        let mut exit_loop = false;
         for operation_number in self.next_operation..range_ending {
             let operation = &self.raw_data[operation_number as usize];
 
             if self.next_slot_status != SlotStatus::EMPTY {
                 let memory = operation.memory.as_ref().unwrap();
                 let mut new_slots = 0;
+
                 if memory.len() as u64 > self.indexed_slots_count {
                     new_slots = memory.len() as u64 - self.indexed_slots_count
                 }
+
                 for _ in 0..new_slots {
                     self.slots[self.indexed_slots_count as usize] = self.next_slot_status;
                     self.indexed_slots_count += 1;
+                }
+
+                if operation_number - self.next_operation + 1 >= iteration {
+                    self.next_operation = operation_number + 1;
+                    exit_loop = true;
                 }
             }
             match operation.op.as_str() {
@@ -152,9 +159,10 @@ impl AppState {
                 "RETURNDATACOPY" => self.next_slot_status = SlotStatus::WRITING,
                 _ => self.next_slot_status = SlotStatus::EMPTY,
             }
+            if exit_loop {
+                break;
+            }
         }
-
-        self.next_operation = range_ending;
 
         Ok(self)
     }
