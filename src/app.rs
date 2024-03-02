@@ -19,7 +19,7 @@ use ratatui::{
     symbols::border,
     widgets::{
         block::{Position, Title},
-        Block, Borders, Cell, Paragraph, Row, Table, TableState,
+        Block, Borders, Cell, List, ListDirection, Paragraph, Row, Table, TableState,
     },
 };
 
@@ -43,7 +43,7 @@ pub struct AppState {
     indexed_slots_count: u64,
     next_operation: u64,
     next_slot_status: SlotStatus,
-    next_operation_code: Option<Operations>,
+    operation_codes: Vec<Operations>,
     raw_data: Vec<StructLog>,
     initialized: bool,
 }
@@ -57,7 +57,7 @@ impl Default for AppState {
             next_slot_status: SlotStatus::INIT,
             raw_data: vec![],
             initialized: false,
-            next_operation_code: None,
+            operation_codes: vec![],
         }
     }
 }
@@ -81,14 +81,14 @@ impl Operations {
             Operations::RETURNDATACOPY => "RETURNDATACOPY",
         }
     }
-    pub fn fromText(op: &str) -> Option<Self> {
+    pub fn from_text(op: &str) -> Result<Self, eyre::Error> {
         match op {
-            "MSTORE" => return Some(Operations::MSTORE),
-            "MSTORE8" => return Some(Operations::MSTORE8),
-            "MLOAD" => return Some(Operations::MLOAD),
-            "CALLDATACOPY" => return Some(Operations::CALLDATACOPY),
-            "RETURNDATACOPY" => return Some(Operations::RETURNDATACOPY),
-        _ => None
+            "MSTORE" => return Ok(Operations::MSTORE),
+            "MSTORE8" => return Ok(Operations::MSTORE8),
+            "MLOAD" => return Ok(Operations::MLOAD),
+            "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
+            "RETURNDATACOPY" => return Ok(Operations::RETURNDATACOPY),
+            _ => return Err(eyre!("Unidentified op code.")),
         }
     }
 }
@@ -141,7 +141,6 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
                     .raw_data
@@ -194,7 +193,11 @@ impl AppState {
 
                 if operation_number - self.next_operation + 1 >= iteration {
                     self.next_operation = operation_number + 1;
-                    if operation_number != 0 {self.next_operation_code = Operations::fromText(self.raw_data[(operation_number - 1) as usize].op.as_str());}
+                    if operation_number != 0 {
+                        self.operation_codes.push(Operations::from_text(
+                            self.raw_data[(operation_number - 1) as usize].op.as_str(),
+                        )?)
+                    }
                     exit_loop = true;
                 }
             }
@@ -339,19 +342,19 @@ impl StatefulWidget for &App {
                 Cell::new("To").style(Style::new().gray()),
                 Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
                     .style(Style::new().gray()),
-            ]),Row::new(vec![
+            ]),
+            Row::new(vec![
                 Cell::new("Block Hash").style(Style::new().gray()),
                 Cell::new("0xcd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546")
                     .style(Style::new().gray()),
-            ]),Row::new(vec![
+            ]),
+            Row::new(vec![
                 Cell::new("Block Number").style(Style::new().gray()),
-                Cell::new("18554494")
-                    .style(Style::new().gray()),
+                Cell::new("18554494").style(Style::new().gray()),
             ]),
             Row::new(vec![
                 Cell::new("Success").style(Style::new().gray()),
-                Cell::new("true")
-                    .style(Style::new().green()),
+                Cell::new("true").style(Style::new().green()),
             ]),
             Row::new(vec![
                 Cell::new("Gas used").style(Style::new().gray()),
@@ -373,13 +376,18 @@ impl StatefulWidget for &App {
         let vec = vec![
             Row::new(vec![
                 Cell::new("Op code").style(Style::new().gray()),
-                Cell::new(state.next_operation_code.unwrap_or(Operations::MLOAD).text())
-                    .style(Style::new().red()),
+                Cell::new(
+                    state
+                        .operation_codes
+                        .last()
+                        .unwrap_or(&Operations::MLOAD)
+                        .text(),
+                )
+                .style(Style::new().red()),
             ]),
             Row::new(vec![
                 Cell::new("Gas cost").style(Style::new().gray()),
-                Cell::new("3")
-                    .style(Style::new().gray()),
+                Cell::new("3").style(Style::new().gray()),
             ]),
         ];
         let op_info_rows = vec;
@@ -389,6 +397,21 @@ impl StatefulWidget for &App {
         )
         .block(op_info_block);
         ratatui::widgets::StatefulWidget::render(op_info_table, info_layout[1], buf, &mut s);
+        // Operation HISTORY
+        let title = Title::from(" Operation history ".bold());
+        let history_info_block = Block::default()
+            .title(title.alignment(Alignment::Center))
+            .borders(Borders::ALL)
+            .border_set(border::THICK);
+        let list = List::new(state.operation_codes.iter().map(|op| op.text()))
+            .block(history_info_block)
+            .style(Style::default().fg(Color::White))
+            .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
+            .highlight_symbol(">>")
+            .repeat_highlight_symbol(true)
+            .direction(ListDirection::TopToBottom);
+
+        ratatui::widgets::Widget::render(list, info_layout[2], buf);
     }
     type State = AppState;
 }
