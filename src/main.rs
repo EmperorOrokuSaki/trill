@@ -1,24 +1,11 @@
-use std::io;
 mod app;
 mod provider;
+mod render;
+mod state;
 mod tui;
-
 use app::App;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{
-    prelude::*,
-    symbols::border,
-    widgets::{block::*, *},
-};
 
-use alloy::{
-    primitives::{address, U256},
-    providers::{Provider, ProviderBuilder},
-};
-use color_eyre::{
-    eyre::{bail, WrapErr},
-    Result,
-};
+use color_eyre::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
