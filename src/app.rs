@@ -10,6 +10,7 @@ use ratatui::prelude::*;
 #[derive(Debug)]
 pub struct App {
     iteration: u64,
+    forward: bool, // false for going back one iteration, true for going forward in the processing
     exit: bool,
 }
 
@@ -18,6 +19,7 @@ impl Default for App {
         Self {
             iteration: 1,
             exit: false,
+            forward: true // go forward
         }
     }
 }
@@ -31,7 +33,7 @@ impl App {
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
         loop {
-            app_state = AppState::run(app_state, self.iteration).await?;
+            app_state = AppState::run(app_state, self.iteration, self.forward).await?;
 
             tui.draw(|f| {
                 // Deref allows calling tui.terminal.draw
@@ -61,6 +63,8 @@ impl App {
         if let Event::Key(key) = event {
             match key.code {
                 Char('q') => self.exit = true,
+                Left => self.forward = false,
+                Right => self.forward = true,
                 _ => {}
             }
         }

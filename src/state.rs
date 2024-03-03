@@ -88,6 +88,18 @@ impl SlotStatus {
             SlotStatus::WRITING => "Writing",
         }
     }
+
+    pub fn from_opcode(op: Operations) -> SlotStatus {
+        
+            match op {
+                Operations::MSTORE => SlotStatus::WRITING,
+                Operations::MSTORE8 => SlotStatus::WRITING,
+                Operations::MLOAD => SlotStatus::READING,
+                Operations::CALLDATACOPY => SlotStatus::WRITING,
+                Operations::RETURNDATACOPY => SlotStatus::WRITING,
+            }
+        
+    }
 }
 
 impl AppState {
@@ -140,16 +152,20 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn run(mut self, iteration: u64) -> Result<Self, eyre::Error> {
+    pub async fn run(mut self, iteration: u64, forward: bool) -> Result<Self, eyre::Error> {
         if !self.initialized {
             self.initialize().await?;
         }
 
-        //let mut range_ending = self.next_operation + iteration;
+        if !forward {
+            // go back one iteration
+            // determin the operation to index
+            // determin the slot status by checking the previous operation that interacted with the memory
+            let to_index = self.next_operation - iteration;
+            // let status = 
+        } 
 
-        //if range_ending > self.raw_data.len() as u64 {
-        let mut range_ending = self.raw_data.len() as u64;
-        //}
+        let range_ending = self.raw_data.len() as u64;
 
         for slot in &mut self.slots {
             if *slot != SlotStatus::EMPTY && *slot != SlotStatus::ACTIVE {
@@ -183,13 +199,7 @@ impl AppState {
                     exit_loop = true;
                 }
             }
-            match operation.op.as_str() {
-                "MSTORE" => self.next_slot_status = SlotStatus::WRITING,
-                "MSTORE8" => self.next_slot_status = SlotStatus::WRITING,
-                "CALLDATACOPY" => self.next_slot_status = SlotStatus::WRITING,
-                "RETURNDATACOPY" => self.next_slot_status = SlotStatus::WRITING,
-                _ => self.next_slot_status = SlotStatus::EMPTY,
-            }
+            self.next_slot_status = SlotStatus::from_opcode(Operations::from_text(operation.op.as_str())?);
             if exit_loop {
                 break;
             }
