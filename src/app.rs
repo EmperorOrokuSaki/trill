@@ -19,7 +19,7 @@ impl Default for App {
         Self {
             iteration: 1,
             exit: false,
-            forward: true // go forward
+            forward: true, // go forward
         }
     }
 }
@@ -63,8 +63,8 @@ impl App {
         if let Event::Key(key) = event {
             match key.code {
                 Char('q') => self.exit = true,
-                Left => self.forward = false,
-                Right => self.forward = true,
+                crossterm::event::KeyCode::Left => self.forward = false,
+                crossterm::event::KeyCode::Right => self.forward = true,
                 _ => {}
             }
         }

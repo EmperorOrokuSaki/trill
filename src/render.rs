@@ -74,23 +74,19 @@ impl<'a> RenderData<'a> {
         let tx_info_rows = vec![
             Row::new(vec![
                 Cell::new("Hash").style(Style::new().gray().bold()),
-                Cell::new(transaction.hash.to_string())
-                    .style(Style::new().gray()),
+                Cell::new(transaction.hash.to_string()).style(Style::new().gray()),
             ]),
             Row::new(vec![
                 Cell::new("From").style(Style::new().gray().bold()),
-                Cell::new(transaction.from.to_string())
-                    .style(Style::new().gray()),
+                Cell::new(transaction.from.to_string()).style(Style::new().gray()),
             ]),
             Row::new(vec![
                 Cell::new("To").style(Style::new().gray().bold()),
-                Cell::new(transaction.to.unwrap().to_string())
-                    .style(Style::new().gray()),
+                Cell::new(transaction.to.unwrap().to_string()).style(Style::new().gray()),
             ]),
             Row::new(vec![
                 Cell::new("Block Hash").style(Style::new().gray().bold()),
-                Cell::new(transaction.block_hash.unwrap().to_string())
-                    .style(Style::new().gray()),
+                Cell::new(transaction.block_hash.unwrap().to_string()).style(Style::new().gray()),
             ]),
             Row::new(vec![
                 Cell::new("Block Number").style(Style::new().gray().bold()),
