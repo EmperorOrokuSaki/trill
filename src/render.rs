@@ -1,4 +1,3 @@
-use alloy::primitives::Address;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -23,12 +22,14 @@ impl<'a> RenderData<'a> {
     fn render_memory(&mut self, layout: Rect) {
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
-            " Decrement ".into(),
-            "<Left>".blue().bold(),
-            " Increment ".into(),
-            "<Right>".blue().bold(),
+            " Back ".into(),
+            "<Left>".green().bold(),
+            " Pause ".into(),
+            "<Enter>".yellow().bold(),
+            " Forward ".into(),
+            "<Right>".green().bold(),
             " Quit ".into(),
-            "<Q> ".blue().bold(),
+            "<Q> ".red().bold(),
         ]));
         let block = Block::default()
             .title(title.alignment(Alignment::Center))
