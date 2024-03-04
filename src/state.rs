@@ -13,6 +13,7 @@ use color_eyre::eyre;
 
 use crate::provider;
 
+#[derive(Debug)]
 pub struct AppState {
     pub slots: Vec<SlotStatus>,
     pub indexed_slots_count: u64,
@@ -148,18 +149,62 @@ impl AppState {
         Ok(())
     }
 
-    pub async fn run(mut self, iteration: u64, forward: bool) -> Result<Self, eyre::Error> {
+    pub async fn run(mut self, iteration: u64, forward: bool, pause: bool) -> Result<Self, eyre::Error> {
         if !self.initialized {
             self.initialize().await?;
         }
+        if pause {
+            return Ok(self);
+        }
+        if !forward {
+            // go back one iteration
+            // determin the operation to index
+            // determin the slot status by checking the previous operation that interacted with the memory
+            let to_index = self.next_operation - iteration;
+            let last_memory_affecting_op_index = self.raw_data[..to_index as usize]
+                .iter()
+                .rev()
+                .enumerate()
+                .find_map(|(index, operation)| {
+                    if Operations::from_text(operation.op.as_str()).is_ok() {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
+                .map(|index| to_index as usize - index - 1);
 
-        //if !forward {
-        // go back one iteration
-        // determin the operation to index
-        // determin the slot status by checking the previous operation that interacted with the memory
-        //    let to_index = self.next_operation - iteration;
-        // let status =
-        //}
+            if last_memory_affecting_op_index.is_none() {
+                return Ok(self);
+            } else {
+                let operation = &self.raw_data[last_memory_affecting_op_index.unwrap()];
+                self.next_slot_status =
+                    SlotStatus::from_opcode(Operations::from_text(operation.op.as_str()).unwrap());
+                self.next_operation = last_memory_affecting_op_index.unwrap() as u64 + 2;
+                for (index, slot) in self.slots.iter_mut().enumerate() {
+                    if index
+                        >= self.raw_data[last_memory_affecting_op_index.unwrap() + 1]
+                            .memory
+                            .as_deref()
+                            .unwrap()
+                            .len()
+                    {
+                        *slot = SlotStatus::EMPTY;
+                    } else if (index
+                        < self.raw_data[last_memory_affecting_op_index.unwrap() + 1]
+                            .memory
+                            .as_deref()
+                            .unwrap()
+                            .len()
+                        && index >= operation.memory.as_deref().unwrap().len())
+                    {
+                        *slot = self.next_slot_status;
+                    }
+                }
+                self.operation_codes.pop();
+                return Ok(self);
+            }
+        }
 
         let range_ending = self.raw_data.len() as u64;
 
