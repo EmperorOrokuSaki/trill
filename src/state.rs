@@ -18,7 +18,7 @@ use crate::provider;
 #[derive(Debug)]
 pub struct AppState {
     pub slots: Vec<SlotStatus>,
-    pub slot_indexes_to_change_status: Vec<u64>,
+    pub slot_indexes_to_change_status: Vec<i64>,
     pub indexed_slots_count: u64,
     pub next_operation: u64,
     pub next_slot_status: SlotStatus,
@@ -55,6 +55,8 @@ pub enum Operations {
     MSIZE,
     EXTCODECOPY,
     CODECOPY,
+    RETURNDATACOPY,
+    MCOPY
 }
 
 impl Operations {
@@ -63,10 +65,12 @@ impl Operations {
             Operations::MSTORE => "MSTORE",
             Operations::MSTORE8 => "MSTORE8",
             Operations::MLOAD => "MLOAD",
+            Operations::MCOPY => "MCOPY",
             Operations::CALLDATACOPY => "CALLDATACOPY",
             Operations::MSIZE => "MSIZE",
             Operations::EXTCODECOPY => "EXTCODECOPY",
             Operations::CODECOPY => "CODECOPY",
+            Operations::RETURNDATACOPY => "RETURNDATACOPY",
         }
     }
     pub fn from_text(op: &str) -> Result<Self, ()> {
@@ -74,10 +78,12 @@ impl Operations {
             "MSTORE" => return Ok(Operations::MSTORE),
             "MSTORE8" => return Ok(Operations::MSTORE8),
             "MLOAD" => return Ok(Operations::MLOAD),
+            "MCOPY" => return Ok(Operations::MCOPY),
             "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
             "MSIZE" => return Ok(Operations::MSIZE),
             "EXTCODECOPY" => return Ok(Operations::EXTCODECOPY),
             "CODECOPY" => return Ok(Operations::CODECOPY),
+            "RETURNDATACOPY" => return Ok(Operations::RETURNDATACOPY),
             _ => return Err(()),
         }
     }
@@ -112,6 +118,8 @@ impl SlotStatus {
             Operations::MSIZE => SlotStatus::READING,
             Operations::EXTCODECOPY => SlotStatus::WRITING,
             Operations::CODECOPY => SlotStatus::WRITING,
+            Operations::RETURNDATACOPY => SlotStatus::WRITING,
+            Operations::MCOPY => SlotStatus::WRITING
         }
     }
 }
@@ -244,6 +252,11 @@ impl AppState {
 
                 // handle slots that need to have their status changed but aren't new
                 for index in self.slot_indexes_to_change_status.clone() {
+                    if index < 0 {
+                        // It's a read from MCOPY
+                        self.slots[(index * -1) as usize] = SlotStatus::READING;
+                        continue;
+                    }
                     self.slots[index as usize] = self.next_slot_status;
                 }
 
@@ -284,9 +297,29 @@ impl AppState {
         self.next_slot_status = SlotStatus::from_opcode(opcode);
         // handle other changes that are applied to the already existing slots
         match opcode {
+            Operations::MCOPY => {
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                    let copy_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap() / Uint::from(32);
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
+                    + Uint::from(31))
+                    / Uint::from(32);
+                for i in memory_offset.to::<i64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<i64>()
+                {
+                    self.slot_indexes_to_change_status.push(i);
+                }
+                for i in copy_offset.to::<i64>()
+                    ..=(copy_offset + memory_end - Uint::from(1)).to::<i64>()
+                {
+                    self.slot_indexes_to_change_status.push(i * -1);
+                }
+            }
             Operations::MSTORE => {
                 let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
-                self.slot_indexes_to_change_status = vec![memory_offset.to::<u64>()];
+                self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
             }
             Operations::EXTCODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -295,8 +328,8 @@ impl AppState {
                 let memory_end = (unwrapped_stack.get(unwrapped_stack.len() - 4).unwrap()
                     + Uint::from(31))
                     / Uint::from(32);
-                for i in memory_offset.to::<u64>()
-                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                for i in memory_offset.to::<i64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<i64>()
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
@@ -308,8 +341,21 @@ impl AppState {
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
                     / Uint::from(32);
-                for i in memory_offset.to::<u64>()
-                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                for i in memory_offset.to::<i64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<i64>()
+                {
+                    self.slot_indexes_to_change_status.push(i);
+                }
+            }
+            Operations::RETURNDATACOPY => {
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
+                    + Uint::from(31))
+                    / Uint::from(32);
+                for i in memory_offset.to::<i64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<i64>()
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
@@ -318,29 +364,28 @@ impl AppState {
                 // Writes one byte value
                 // TODO: Check what happens if the offset is at the end of a slot and the value needs more space, does it overflow to the next slot?
                 let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
-                self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
+                self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<i64>()];
             }
             Operations::MLOAD => {
                 let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
-                self.slot_indexes_to_change_status = vec![memory_offset.to::<u64>()];
+                self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
             }
             Operations::CALLDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset =
                     unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
-                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap()
-                    * Uint::from(2))
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
                     / Uint::from(32);
-                for i in memory_offset.to::<u64>()
-                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                for i in memory_offset.to::<i64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<i64>()
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
             }
             Operations::MSIZE => {
                 self.slot_indexes_to_change_status =
-                    (0..self.indexed_slots_count).map(|x| x as u64).collect();
+                    (0..self.indexed_slots_count).map(|x| x as i64).collect();
             }
         }
     }
