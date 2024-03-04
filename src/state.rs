@@ -110,7 +110,6 @@ impl AppState {
             fixed_bytes!("cd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546");
         let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
         self.transaction = transaction_result;
-
         let opts = GethDebugTracingOptions {
             config: GethDefaultTracingOptions {
                 enable_memory: Some(true),
@@ -154,13 +153,13 @@ impl AppState {
             self.initialize().await?;
         }
 
-        if !forward {
-            // go back one iteration
-            // determin the operation to index
-            // determin the slot status by checking the previous operation that interacted with the memory
-            let to_index = self.next_operation - iteration;
-            // let status =
-        }
+        //if !forward {
+        // go back one iteration
+        // determin the operation to index
+        // determin the slot status by checking the previous operation that interacted with the memory
+        //    let to_index = self.next_operation - iteration;
+        // let status =
+        //}
 
         let range_ending = self.raw_data.len() as u64;
 
@@ -171,6 +170,7 @@ impl AppState {
         }
         let mut exit_loop = false;
         for operation_number in self.next_operation..range_ending {
+            // going through all opcodes
             let operation = &self.raw_data[operation_number as usize];
 
             if self.next_slot_status != SlotStatus::EMPTY {
@@ -199,9 +199,12 @@ impl AppState {
                     exit_loop = true;
                 }
             }
+
             if Operations::from_text(operation.op.as_str()).is_ok() {
                 self.next_slot_status =
                     SlotStatus::from_opcode(Operations::from_text(operation.op.as_str()).unwrap());
+            } else {
+                self.next_slot_status = SlotStatus::EMPTY;
             }
 
             if exit_loop {
