@@ -1,3 +1,5 @@
+use std::{thread::sleep, time::Duration};
+
 use alloy::{
     primitives::{fixed_bytes, Uint, U256},
     providers::Provider,
@@ -51,7 +53,7 @@ pub enum Operations {
     MLOAD,
     CALLDATACOPY,
     MSIZE,
-    EXTCODECOPY
+    EXTCODECOPY,
 }
 
 impl Operations {
@@ -62,7 +64,7 @@ impl Operations {
             Operations::MLOAD => "MLOAD",
             Operations::CALLDATACOPY => "CALLDATACOPY",
             Operations::MSIZE => "MSIZE",
-            Operations::EXTCODECOPY => "EXTCODECOPY"
+            Operations::EXTCODECOPY => "EXTCODECOPY",
         }
     }
     pub fn from_text(op: &str) -> Result<Self, ()> {
@@ -114,7 +116,7 @@ impl AppState {
     async fn initialize(&mut self) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
         let tx_hash =
-            fixed_bytes!("c9d556845773e376e144d3996552366e1ffd58d43bf124cd6acae580474f4a8f");
+            fixed_bytes!("6b9a0e54c17c866958050199f89904c7686b9339c5967c8c70610c7df45c0183");
         let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
@@ -137,7 +139,8 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                //std::fs::write("result1.json", context.to_string()).expect("Failed to write to file");
+                // std::fs::write("result2.json", context.to_string())
+                //     .expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
@@ -277,18 +280,46 @@ impl AppState {
         self.next_slot_status = SlotStatus::from_opcode(opcode);
         // handle other changes that are applied to the already existing slots
         match opcode {
+            Operations::MSTORE => {
+                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                self.slot_indexes_to_change_status = vec![memory_offset.to::<u64>()];
+            }
+            Operations::EXTCODECOPY => {
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap() / Uint::from(32);
+                let memory_end = (unwrapped_stack.get(unwrapped_stack.len() - 4).unwrap()
+                    + Uint::from(31))
+                    / Uint::from(32);
+                for i in memory_offset.to::<u64>()..=(memory_offset + memory_end - Uint::from(1)).to::<u64>() {
+                    self.slot_indexes_to_change_status.push(i);
+                }
+            }
             Operations::MSTORE8 => {
+                // Writes one byte value
+                // TODO: Check what happens if the offset is at the end of a slot and the value needs more space, does it overflow to the next slot?
                 let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
             }
             Operations::MLOAD => {
                 let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
-                self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
+                self.slot_indexes_to_change_status = vec![memory_offset.to::<u64>()];
             }
-            Operations::CALLDATACOPY => {},
+            Operations::CALLDATACOPY => {
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap() * Uint::from(2))
+                    + Uint::from(31))
+                    / Uint::from(32);
+                for i in memory_offset.to::<u64>()..=(memory_offset + memory_end - Uint::from(1)).to::<u64>() {
+                    self.slot_indexes_to_change_status.push(i);
+                }
+            }
             Operations::MSIZE => {
-                self.slot_indexes_to_change_status = (0..self.indexed_slots_count).map(|x| x as u64).collect();
-            },
+                self.slot_indexes_to_change_status =
+                    (0..self.indexed_slots_count).map(|x| x as u64).collect();
+            }
             _ => {}
         }
     }
