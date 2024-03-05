@@ -1,5 +1,5 @@
 use alloy::{
-    primitives::{fixed_bytes, Uint},
+    primitives::{fixed_bytes, Uint, U256},
     providers::Provider,
     rpc::types::{
         eth::Transaction,
@@ -16,6 +16,7 @@ use crate::provider;
 #[derive(Debug)]
 pub struct AppState {
     pub slots: Vec<SlotStatus>,
+    pub slot_indexes_to_change_status: Vec<u64>,
     pub indexed_slots_count: u64,
     pub next_operation: u64,
     pub next_slot_status: SlotStatus,
@@ -38,6 +39,7 @@ impl Default for AppState {
             operation_codes: vec![],
             transaction: Transaction::default(),
             transaction_sucess: false,
+            slot_indexes_to_change_status: vec![],
         }
     }
 }
@@ -49,6 +51,7 @@ pub enum Operations {
     MLOAD,
     CALLDATACOPY,
     RETURNDATACOPY,
+    MSIZE
 }
 
 impl Operations {
@@ -59,6 +62,7 @@ impl Operations {
             Operations::MLOAD => "MLOAD",
             Operations::CALLDATACOPY => "CALLDATACOPY",
             Operations::RETURNDATACOPY => "RETURNDATACOPY",
+            Operations::MSIZE => "MSIZE"
         }
     }
     pub fn from_text(op: &str) -> Result<Self, ()> {
@@ -68,6 +72,7 @@ impl Operations {
             "MLOAD" => return Ok(Operations::MLOAD),
             "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
             "RETURNDATACOPY" => return Ok(Operations::RETURNDATACOPY),
+            "MSIZE" => return Ok(Operations::MSIZE),
             _ => return Err(()),
         }
     }
@@ -95,11 +100,12 @@ impl SlotStatus {
 
     pub fn from_opcode(op: Operations) -> SlotStatus {
         match op {
+            Operations::CALLDATACOPY => SlotStatus::WRITING,
+            Operations::RETURNDATACOPY => SlotStatus::WRITING,
             Operations::MSTORE => SlotStatus::WRITING,
             Operations::MSTORE8 => SlotStatus::WRITING,
             Operations::MLOAD => SlotStatus::READING,
-            Operations::CALLDATACOPY => SlotStatus::WRITING,
-            Operations::RETURNDATACOPY => SlotStatus::WRITING,
+            Operations::MSIZE => SlotStatus::READING,
         }
     }
 }
@@ -108,7 +114,7 @@ impl AppState {
     async fn initialize(&mut self) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
         let tx_hash =
-            fixed_bytes!("cd3d9bba59cb634070a0b84bf333c97daed0eb6244929f3ba27b847365bbe546");
+            fixed_bytes!("c9d556845773e376e144d3996552366e1ffd58d43bf124cd6acae580474f4a8f");
         let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
@@ -131,7 +137,7 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                //std::fs::write("result.json", context.to_string()).expect("Failed to write to file");
+                //std::fs::write("result1.json", context.to_string()).expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
@@ -211,43 +217,51 @@ impl AppState {
         let mut exit_loop = false;
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
-            let operation = &self.raw_data[operation_number as usize];
+            let operation = self.raw_data[operation_number as usize].clone();
 
             if self.next_slot_status != SlotStatus::EMPTY {
+                // Condition to check if the memory is affected in this operation as a result of the previous operation
+                // Memory is affected
                 let memory = operation.memory.as_ref().unwrap();
                 let mut new_slots = 0;
 
+                // handle the new slots
                 if memory.len() as u64 > self.indexed_slots_count {
                     new_slots = memory.len() as u64 - self.indexed_slots_count
                 }
 
                 for _ in 0..new_slots {
+                    // New slots can only be write operations
                     self.slots[self.indexed_slots_count as usize] = self.next_slot_status;
                     self.indexed_slots_count += 1;
                 }
 
+                // handle slots that need to have their status changed but aren't new
+                for index in self.slot_indexes_to_change_status.clone() {
+                    self.slots[index as usize] = self.next_slot_status;
+                }
+
+                self.slot_indexes_to_change_status = vec![];
+
+                // push opcode to history
+                if operation_number != 0 {
+                    self.operation_codes.push(
+                        Operations::from_text(
+                            self.raw_data[(operation_number - 1) as usize].op.as_str(),
+                        )
+                        .unwrap(),
+                    )
+                }
+
+                // exit if it's the last iter
                 if operation_number - self.next_operation + 1 >= iteration {
                     self.next_operation = operation_number + 1;
-                    if operation_number != 0 {
-                        self.operation_codes.push(
-                            Operations::from_text(
-                                self.raw_data[(operation_number - 1) as usize].op.as_str(),
-                            )
-                            .unwrap(),
-                        )
-                    }
                     exit_loop = true;
                 }
             }
 
-            if Operations::from_text(operation.op.as_str()).is_ok() {
-                self.next_slot_status =
-                    SlotStatus::from_opcode(Operations::from_text(operation.op.as_str()).unwrap());
-                if self.next_slot_status == SlotStatus::READING {
-                    let memory_offset =
-                        operation.stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
-                    self.slots[memory_offset.saturating_to::<usize>()] = SlotStatus::READING;
-                }
+            if let Ok(opcode) = Operations::from_text(operation.op.as_str()) {
+                self.handle_opcode(opcode, operation.stack);
             } else {
                 self.next_slot_status = SlotStatus::EMPTY;
             }
@@ -258,6 +272,27 @@ impl AppState {
         }
 
         Ok(self)
+    }
+
+    fn handle_opcode(&mut self, opcode: Operations, stack: Option<Vec<U256>>) {
+        self.next_slot_status = SlotStatus::from_opcode(opcode);
+        // handle other changes that are applied to the already existing slots
+        match opcode {
+            Operations::MSTORE8 => {
+                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
+            }
+            Operations::MLOAD => {
+                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
+            }
+            Operations::CALLDATACOPY => {},
+            Operations::RETURNDATACOPY => todo!(),
+            Operations::MSIZE => {
+                self.slot_indexes_to_change_status = (0..self.slots.len()).map(|x| x as u64).collect();
+            },
+            _ => {}
+        }
     }
 
     pub async fn run(

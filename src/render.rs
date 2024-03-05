@@ -52,7 +52,7 @@ impl<'a> RenderData<'a> {
                 SlotStatus::WRITING => row.push(Cell::new("■").style(Style::new().red())),
                 SlotStatus::INIT => (),
             }
-            if slot % 100 == 99 {
+            if slot % 100 == 99 || slot == self.state.slots.len() - 1 {
                 rows.push(Row::new(row.clone()));
                 row.clear();
             }
