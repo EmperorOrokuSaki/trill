@@ -11,7 +11,7 @@ use ratatui::prelude::*;
 pub struct App {
     iteration: u64,
     forward: bool, // false for going back one iteration, true for going forward in the processing
-    pause: bool, // false for not pause and true for pause
+    pause: bool,   // false for not pause and true for pause
     exit: bool,
 }
 
@@ -21,7 +21,7 @@ impl Default for App {
             iteration: 1,
             exit: false,
             forward: true, // go forward
-            pause: false
+            pause: false,
         }
     }
 }
