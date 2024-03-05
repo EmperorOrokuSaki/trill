@@ -1,5 +1,5 @@
 use alloy::{
-    primitives::fixed_bytes,
+    primitives::{fixed_bytes, Uint},
     providers::Provider,
     rpc::types::{
         eth::Transaction,
@@ -115,7 +115,7 @@ impl AppState {
             config: GethDefaultTracingOptions {
                 enable_memory: Some(true),
                 disable_memory: None,
-                disable_stack: Some(true),
+                disable_stack: Some(false),
                 disable_storage: Some(true),
                 enable_return_data: Some(true),
                 disable_return_data: Some(false),
@@ -131,6 +131,7 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
+                //std::fs::write("result.json", context.to_string()).expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
@@ -248,6 +249,10 @@ impl AppState {
             if Operations::from_text(operation.op.as_str()).is_ok() {
                 self.next_slot_status =
                     SlotStatus::from_opcode(Operations::from_text(operation.op.as_str()).unwrap());
+                if self.next_slot_status == SlotStatus::READING {
+                    let memory_offset = operation.stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                    self.slots[memory_offset.saturating_to::<usize>()] = SlotStatus::READING;
+                }
             } else {
                 self.next_slot_status = SlotStatus::EMPTY;
             }
