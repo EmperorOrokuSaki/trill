@@ -54,6 +54,7 @@ pub enum Operations {
     CALLDATACOPY,
     MSIZE,
     EXTCODECOPY,
+    CODECOPY,
 }
 
 impl Operations {
@@ -65,6 +66,7 @@ impl Operations {
             Operations::CALLDATACOPY => "CALLDATACOPY",
             Operations::MSIZE => "MSIZE",
             Operations::EXTCODECOPY => "EXTCODECOPY",
+            Operations::CODECOPY => "CODECOPY",
         }
     }
     pub fn from_text(op: &str) -> Result<Self, ()> {
@@ -75,6 +77,7 @@ impl Operations {
             "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
             "MSIZE" => return Ok(Operations::MSIZE),
             "EXTCODECOPY" => return Ok(Operations::EXTCODECOPY),
+            "CODECOPY" => return Ok(Operations::CODECOPY),
             _ => return Err(()),
         }
     }
@@ -108,6 +111,7 @@ impl SlotStatus {
             Operations::MLOAD => SlotStatus::READING,
             Operations::MSIZE => SlotStatus::READING,
             Operations::EXTCODECOPY => SlotStatus::WRITING,
+            Operations::CODECOPY => SlotStatus::WRITING,
         }
     }
 }
@@ -291,7 +295,22 @@ impl AppState {
                 let memory_end = (unwrapped_stack.get(unwrapped_stack.len() - 4).unwrap()
                     + Uint::from(31))
                     / Uint::from(32);
-                for i in memory_offset.to::<u64>()..=(memory_offset + memory_end - Uint::from(1)).to::<u64>() {
+                for i in memory_offset.to::<u64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                {
+                    self.slot_indexes_to_change_status.push(i);
+                }
+            }
+            Operations::CODECOPY => {
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset =
+                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
+                    + Uint::from(31))
+                    / Uint::from(32);
+                for i in memory_offset.to::<u64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                {
                     self.slot_indexes_to_change_status.push(i);
                 }
             }
@@ -309,10 +328,13 @@ impl AppState {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset =
                     unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
-                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap() * Uint::from(2))
+                let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap()
+                    * Uint::from(2))
                     + Uint::from(31))
                     / Uint::from(32);
-                for i in memory_offset.to::<u64>()..=(memory_offset + memory_end - Uint::from(1)).to::<u64>() {
+                for i in memory_offset.to::<u64>()
+                    ..=(memory_offset + memory_end - Uint::from(1)).to::<u64>()
+                {
                     self.slot_indexes_to_change_status.push(i);
                 }
             }
@@ -320,7 +342,6 @@ impl AppState {
                 self.slot_indexes_to_change_status =
                     (0..self.indexed_slots_count).map(|x| x as u64).collect();
             }
-            _ => {}
         }
     }
 
