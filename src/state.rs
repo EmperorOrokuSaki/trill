@@ -50,8 +50,8 @@ pub enum Operations {
     MSTORE8,
     MLOAD,
     CALLDATACOPY,
-    RETURNDATACOPY,
-    MSIZE
+    MSIZE,
+    EXTCODECOPY
 }
 
 impl Operations {
@@ -61,8 +61,8 @@ impl Operations {
             Operations::MSTORE8 => "MSTORE8",
             Operations::MLOAD => "MLOAD",
             Operations::CALLDATACOPY => "CALLDATACOPY",
-            Operations::RETURNDATACOPY => "RETURNDATACOPY",
-            Operations::MSIZE => "MSIZE"
+            Operations::MSIZE => "MSIZE",
+            Operations::EXTCODECOPY => "EXTCODECOPY"
         }
     }
     pub fn from_text(op: &str) -> Result<Self, ()> {
@@ -71,8 +71,8 @@ impl Operations {
             "MSTORE8" => return Ok(Operations::MSTORE8),
             "MLOAD" => return Ok(Operations::MLOAD),
             "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
-            "RETURNDATACOPY" => return Ok(Operations::RETURNDATACOPY),
             "MSIZE" => return Ok(Operations::MSIZE),
+            "EXTCODECOPY" => return Ok(Operations::EXTCODECOPY),
             _ => return Err(()),
         }
     }
@@ -101,11 +101,11 @@ impl SlotStatus {
     pub fn from_opcode(op: Operations) -> SlotStatus {
         match op {
             Operations::CALLDATACOPY => SlotStatus::WRITING,
-            Operations::RETURNDATACOPY => SlotStatus::WRITING,
             Operations::MSTORE => SlotStatus::WRITING,
             Operations::MSTORE8 => SlotStatus::WRITING,
             Operations::MLOAD => SlotStatus::READING,
             Operations::MSIZE => SlotStatus::READING,
+            Operations::EXTCODECOPY => SlotStatus::WRITING,
         }
     }
 }
@@ -190,13 +190,13 @@ impl AppState {
                         .len()
                 {
                     *slot = SlotStatus::EMPTY;
-                } else if (index
+                } else if index
                     < self.raw_data[last_memory_affecting_op_index.unwrap() + 1]
                         .memory
                         .as_deref()
                         .unwrap()
                         .len()
-                    && index >= operation.memory.as_deref().unwrap().len())
+                    && index >= operation.memory.as_deref().unwrap().len()
                 {
                     *slot = self.next_slot_status;
                 }
@@ -218,7 +218,6 @@ impl AppState {
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
             let operation = self.raw_data[operation_number as usize].clone();
-
             if self.next_slot_status != SlotStatus::EMPTY {
                 // Condition to check if the memory is affected in this operation as a result of the previous operation
                 // Memory is affected
@@ -287,9 +286,8 @@ impl AppState {
                 self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<u64>()];
             }
             Operations::CALLDATACOPY => {},
-            Operations::RETURNDATACOPY => todo!(),
             Operations::MSIZE => {
-                self.slot_indexes_to_change_status = (0..self.slots.len()).map(|x| x as u64).collect();
+                self.slot_indexes_to_change_status = (0..self.indexed_slots_count).map(|x| x as u64).collect();
             },
             _ => {}
         }
