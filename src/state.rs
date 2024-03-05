@@ -1,5 +1,3 @@
-use std::{thread::sleep, time::Duration};
-
 use alloy::{
     primitives::{fixed_bytes, Uint, U256},
     providers::Provider,
