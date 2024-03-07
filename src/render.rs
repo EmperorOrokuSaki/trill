@@ -1,12 +1,13 @@
 use ratatui::{
     buffer::Buffer,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
     symbols::border,
     text::{Line, Text},
     widgets::{
         block::{Position, Title},
-        Block, Borders, Cell, List, ListDirection, Row, Table, TableState,
+        Block, Borders, Cell, List, ListDirection, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, StatefulWidget, Table, TableState, Widget,
     },
 };
 
@@ -57,7 +58,7 @@ impl<'a> RenderData<'a> {
                 row.clear();
             }
         }
-        ratatui::widgets::StatefulWidget::render(
+        StatefulWidget::render(
             Table::new(rows, [Constraint::Length(1); 100]).block(block),
             layout,
             self.buf,
@@ -109,7 +110,7 @@ impl<'a> RenderData<'a> {
         .block(tx_info_block);
         let mut s = TableState::default();
 
-        ratatui::widgets::StatefulWidget::render(tx_info_table, layout, self.buf, &mut s);
+        StatefulWidget::render(tx_info_table, layout, self.buf, &mut s);
     }
 
     fn render_current_operation_box(&mut self, layout: Rect) {
@@ -143,7 +144,7 @@ impl<'a> RenderData<'a> {
         .block(op_info_block);
         let mut s = TableState::default();
 
-        ratatui::widgets::StatefulWidget::render(op_info_table, layout, self.buf, &mut s);
+        StatefulWidget::render(op_info_table, layout, self.buf, &mut s);
     }
 
     fn render_operation_history(&mut self, layout: Rect) {
@@ -152,20 +153,35 @@ impl<'a> RenderData<'a> {
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::THICK);
-        let list = List::new(
-            self.state
-                .operation_codes
-                .iter()
-                .map(|op| Text::styled(op.text(), Style::default().green())),
-        )
-        .block(history_info_block)
-        .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
-        .highlight_symbol(">>")
-        .repeat_highlight_symbol(true)
-        .direction(ListDirection::TopToBottom);
 
-        ratatui::widgets::Widget::render(list, layout, self.buf);
+        let items: Vec<Line> = self
+            .state
+            .operation_codes
+            .iter()
+            .map(|op| Line::from(op.text()))
+            .collect();
+
+        let items_collection = Paragraph::new(items.clone())
+            .scroll((self.state.history_vertical_scroll, 0))
+            .block(history_info_block)
+            .style(Style::default().fg(Color::White));
+
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓"));
+        let mut scrollbar_state =
+            ScrollbarState::new(items.len()).position(self.state.history_vertical_scroll as usize);
+        Widget::render(items_collection, layout, self.buf);
+        StatefulWidget::render(
+            scrollbar,
+            layout.inner(&Margin {
+                // using an inner vertical margin of 1 unit makes the scrollbar inside the block
+                vertical: 1,
+                horizontal: 0,
+            }),
+            self.buf,
+            &mut scrollbar_state,
+        );
     }
 
     pub fn render_all(&mut self) {

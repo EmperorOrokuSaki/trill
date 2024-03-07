@@ -13,7 +13,7 @@ use color_eyre::eyre;
 
 use crate::provider;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub slots: Vec<SlotStatus>,
     pub slot_indexes_to_change_status: Vec<i64>,
@@ -25,6 +25,7 @@ pub struct AppState {
     pub initialized: bool,
     pub transaction: Transaction,
     pub transaction_sucess: bool,
+    pub history_vertical_scroll: u16,
 }
 
 impl Default for AppState {
@@ -40,6 +41,7 @@ impl Default for AppState {
             transaction: Transaction::default(),
             transaction_sucess: false,
             slot_indexes_to_change_status: vec![],
+            history_vertical_scroll: 0,
         }
     }
 }
@@ -54,7 +56,7 @@ pub enum Operations {
     EXTCODECOPY,
     CODECOPY,
     RETURNDATACOPY,
-    MCOPY
+    MCOPY,
 }
 
 impl Operations {
@@ -117,7 +119,7 @@ impl SlotStatus {
             Operations::EXTCODECOPY => SlotStatus::WRITING,
             Operations::CODECOPY => SlotStatus::WRITING,
             Operations::RETURNDATACOPY => SlotStatus::WRITING,
-            Operations::MCOPY => SlotStatus::WRITING
+            Operations::MCOPY => SlotStatus::WRITING,
         }
     }
 }
@@ -299,7 +301,7 @@ impl AppState {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset =
                     unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
-                    let copy_offset =
+                let copy_offset =
                     unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap() / Uint::from(32);
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
@@ -309,8 +311,8 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
-                for i in copy_offset.to::<i64>()
-                    ..=(copy_offset + memory_end - Uint::from(1)).to::<i64>()
+                for i in
+                    copy_offset.to::<i64>()..=(copy_offset + memory_end - Uint::from(1)).to::<i64>()
                 {
                     self.slot_indexes_to_change_status.push(i * -1);
                 }

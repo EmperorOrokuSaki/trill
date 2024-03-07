@@ -44,7 +44,7 @@ impl App {
             self.forward = true;
             if let Some(evt) = tui.next().await {
                 // tui.next().await blocks till next event
-                self.handle_event(evt)?;
+                self.handle_event(evt, &mut app_state)?;
             };
 
             if self.exit {
@@ -61,13 +61,20 @@ impl App {
         frame.render_stateful_widget(self, frame.size(), &mut state);
     }
 
-    fn handle_event(&mut self, event: Event) -> io::Result<()> {
+    fn handle_event(&mut self, event: Event, state: &mut AppState) -> io::Result<()> {
         if let Event::Key(key) = event {
             match key.code {
                 Char('q') => self.exit = true,
                 crossterm::event::KeyCode::Left => self.forward = false,
                 crossterm::event::KeyCode::Right => self.forward = true,
-                crossterm::event::KeyCode::Enter => self.pause = !self.pause,
+                crossterm::event::KeyCode::Down => {
+                    state.history_vertical_scroll = state.history_vertical_scroll + 1
+                }
+                crossterm::event::KeyCode::Up => {
+                    if state.history_vertical_scroll > 0 {
+                        state.history_vertical_scroll -= 1;
+                    }
+                }
                 _ => {}
             }
         }
