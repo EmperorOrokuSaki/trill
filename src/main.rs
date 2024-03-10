@@ -4,8 +4,9 @@ mod provider;
 mod render;
 mod state;
 mod tui;
-use app::App;
+mod cli;
 
+use app::App;
 use color_eyre::Result;
 
 #[tokio::main]
