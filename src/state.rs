@@ -128,7 +128,7 @@ impl AppState {
     async fn initialize(&mut self) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
         let tx_hash =
-            fixed_bytes!("6b9a0e54c17c866958050199f89904c7686b9339c5967c8c70610c7df45c0183");
+            fixed_bytes!("970bf06f06ee47ce411f357b73b07a5267c72b838eb11950399144baa05e8740");
         let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
@@ -151,7 +151,7 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                // std::fs::write("result2.json", context.to_string())
+                // std::fs::write("result3.json", context.to_string())
                 //     .expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;

@@ -21,6 +21,7 @@ pub struct RenderData<'a> {
 
 impl<'a> RenderData<'a> {
     fn render_memory(&mut self, layout: Rect) {
+        // dbg!(&layout.width);
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
             " Back ".into(),
@@ -39,13 +40,22 @@ impl<'a> RenderData<'a> {
                     .alignment(Alignment::Center)
                     .position(Position::Bottom),
             )
-            .borders(Borders::ALL)
+            .borders(Borders::TOP)
             .border_set(border::THICK);
 
         let mut s = TableState::default();
         let mut rows: Vec<Row> = vec![];
         let mut row: Vec<Cell> = vec![];
-        for slot in 0..self.state.slots.len() {
+        let width : usize = (layout.width / 2) as usize;
+        let height : usize = (layout.height - 2) as usize;
+        let mut range_ending = self.state.slots.len();
+        
+        if width * height < self.state.slots.len() {
+            // need pagination
+            range_ending = width * height;
+        }
+
+        for slot in 0..range_ending {
             match self.state.slots[slot] {
                 SlotStatus::EMPTY => row.push(Cell::new("■").style(Style::new().gray())),
                 SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
@@ -53,13 +63,13 @@ impl<'a> RenderData<'a> {
                 SlotStatus::WRITING => row.push(Cell::new("■").style(Style::new().red())),
                 SlotStatus::INIT => (),
             }
-            if slot % 100 == 99 || slot == self.state.slots.len() - 1 {
+            if slot % width == width - 1 || slot == self.state.slots.len() - 1 {
                 rows.push(Row::new(row.clone()));
                 row.clear();
             }
         }
         StatefulWidget::render(
-            Table::new(rows, [Constraint::Length(1); 100]).block(block),
+            Table::new(rows, vec![Constraint::Length(1); width]).block(block),
             layout,
             self.buf,
             &mut s,
