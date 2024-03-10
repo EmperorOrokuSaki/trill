@@ -75,6 +75,7 @@ impl App {
                         state.history_vertical_scroll -= 1;
                     }
                 }
+                Char(' ') => self.pause = !self.pause,
                 _ => {}
             }
         }

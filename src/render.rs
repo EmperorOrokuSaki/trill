@@ -26,7 +26,7 @@ impl<'a> RenderData<'a> {
             " Back ".into(),
             "<Left>".green().bold(),
             " Pause ".into(),
-            "<Enter>".yellow().bold(),
+            "<Space>".yellow().bold(),
             " Forward ".into(),
             "<Right>".green().bold(),
             " Quit ".into(),
@@ -148,9 +148,17 @@ impl<'a> RenderData<'a> {
     }
 
     fn render_operation_history(&mut self, layout: Rect) {
-        let title = Title::from(" Operation history ".bold());
+        let title = Title::from(" History ".bold());
+
+        let instructions = Title::from(Line::from(vec![
+            "<Up>".yellow().bold(),
+            " Scroll ".into(),
+            "<Down>".yellow().bold(),
+        ]));
+
         let history_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
+            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
@@ -193,9 +201,9 @@ impl<'a> RenderData<'a> {
         let info_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
-                Constraint::Percentage(30),
                 Constraint::Percentage(40),
-                Constraint::Percentage(30),
+                Constraint::Percentage(50),
+                Constraint::Percentage(10),
             ])
             .split(layout[1]);
 
