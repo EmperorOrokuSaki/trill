@@ -1,10 +1,10 @@
 mod app;
+mod cli;
 mod error;
 mod provider;
 mod render;
 mod state;
 mod tui;
-mod cli;
 
 use app::App;
 use color_eyre::Result;

@@ -13,6 +13,7 @@ pub struct App {
     forward: bool, // false for going back one iteration, true for going forward in the processing
     pause: bool,   // false for not pause and true for pause
     exit: bool,
+    scroll_table: Option<bool>,
 }
 
 impl Default for App {
@@ -22,6 +23,7 @@ impl Default for App {
             exit: false,
             forward: true, // go forward
             pause: false,
+            scroll_table: None,
         }
     }
 }
@@ -35,6 +37,17 @@ impl App {
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
         loop {
+            if let Some(scroll_direction) = self.scroll_table {
+                if !scroll_direction && app_state.table_beginning_index > 0 {
+                    // Go up
+                    app_state.table_beginning_index -= 1;
+                } else if scroll_direction {
+                    // Go down
+                    app_state.table_beginning_index += 1;
+                }
+
+                self.scroll_table = None;
+            }
             app_state = AppState::run(app_state, self.iteration, self.forward, self.pause).await?;
 
             tui.draw(|f| {
@@ -76,6 +89,8 @@ impl App {
                     }
                 }
                 Char(' ') => self.pause = !self.pause,
+                Char('w') => self.scroll_table = Some(false),
+                Char('s') => self.scroll_table = Some(true),
                 _ => {}
             }
         }

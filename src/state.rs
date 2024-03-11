@@ -26,6 +26,7 @@ pub struct AppState {
     pub transaction: Transaction,
     pub transaction_sucess: bool,
     pub history_vertical_scroll: u16,
+    pub table_beginning_index: u64,
 }
 
 impl Default for AppState {
@@ -42,6 +43,7 @@ impl Default for AppState {
             transaction_sucess: false,
             slot_indexes_to_change_status: vec![],
             history_vertical_scroll: 0,
+            table_beginning_index: 0,
         }
     }
 }

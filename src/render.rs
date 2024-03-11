@@ -46,16 +46,22 @@ impl<'a> RenderData<'a> {
         let mut s = TableState::default();
         let mut rows: Vec<Row> = vec![];
         let mut row: Vec<Cell> = vec![];
-        let width : usize = (layout.width / 2) as usize;
-        let height : usize = (layout.height - 2) as usize;
+        let width: usize = (layout.width / 2) as usize;
+        let height: usize = (layout.height - 2) as usize;
+        let mut first_slot: usize = self.state.table_beginning_index as usize * width;
         let mut range_ending = self.state.slots.len();
         
-        if width * height < self.state.slots.len() {
+        if first_slot > self.state.slots.len() {
+            self.state.table_beginning_index -= 1;
+            first_slot = self.state.table_beginning_index as usize * width;
+        }
+
+        if width * height < self.state.slots.len() - first_slot {
             // need pagination
             range_ending = width * height;
         }
 
-        for slot in 0..range_ending {
+        for slot in first_slot..range_ending {
             match self.state.slots[slot] {
                 SlotStatus::EMPTY => row.push(Cell::new("■").style(Style::new().gray())),
                 SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
@@ -168,7 +174,11 @@ impl<'a> RenderData<'a> {
 
         let history_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
-            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
+            .title(
+                instructions
+                    .alignment(Alignment::Center)
+                    .position(Position::Bottom),
+            )
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
