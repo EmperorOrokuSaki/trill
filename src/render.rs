@@ -50,7 +50,7 @@ impl<'a> RenderData<'a> {
         let height: usize = (layout.height - 2) as usize;
         let mut first_slot: usize = self.state.table_beginning_index as usize * width;
         let mut range_ending = self.state.slots.len();
-        
+
         if first_slot > self.state.slots.len() {
             self.state.table_beginning_index -= 1;
             first_slot = self.state.table_beginning_index as usize * width;
