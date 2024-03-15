@@ -315,11 +315,15 @@ impl AppState {
         Ok(self)
     }
 
-    fn handle_opcode(&mut self, opcode: Operations, stack: Option<Vec<U256>>) -> HashMap<String, String> {
+    fn handle_opcode(
+        &mut self,
+        opcode: Operations,
+        stack: Option<Vec<U256>>,
+    ) -> HashMap<String, String> {
         self.next_slot_status = SlotStatus::from_opcode(opcode);
-        let mut params : HashMap<String, String> = HashMap::new();
+        let mut params: HashMap<String, String> = HashMap::new();
         // handle other changes that are applied to the already existing slots
-        return match opcode {
+        match opcode {
             Operations::MCOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset =
@@ -339,18 +343,51 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i * -1);
                 }
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Byte Size".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 3)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::MSTORE => {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Value".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Value".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::EXTCODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -364,11 +401,31 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
-                params.insert("Address".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<Address>().to_string());
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
-                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 4).unwrap().to::<u64>().to_string());
-                params
+                //params.insert("Address".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to_string());
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 3)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Byte Size".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 4)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::CODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -382,10 +439,30 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Byte Size".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 3)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::RETURNDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -399,10 +476,30 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Byte Size".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 3)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::MSTORE8 => {
                 // Writes one byte value
@@ -410,16 +507,35 @@ impl AppState {
                 let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<i64>()];
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Value".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Value".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::MLOAD => {
                 let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::CALLDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -433,17 +549,37 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
-                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
-                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
-                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
-                params
+                params.insert(
+                    "Destination Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 1)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Source Offset".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 2)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
+                params.insert(
+                    "Byte Size".to_string(),
+                    unwrapped_stack
+                        .get(unwrapped_stack.len() - 3)
+                        .unwrap()
+                        .to::<u64>()
+                        .to_string(),
+                );
             }
             Operations::MSIZE => {
                 self.slot_indexes_to_change_status =
                     (0..self.indexed_slots_count).map(|x| x as i64).collect();
-                params
             }
-        }
+        };
+        params
     }
 
     pub async fn run(
