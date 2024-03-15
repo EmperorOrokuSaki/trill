@@ -27,7 +27,7 @@ pub struct AppState {
     pub transaction_sucess: bool,
     pub history_vertical_scroll: u16,
     pub table_beginning_index: u64,
-    pub operation_to_render: Option<OperationData>
+    pub operation_to_render: Option<OperationData>,
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ impl Default for AppState {
             slot_indexes_to_change_status: vec![],
             history_vertical_scroll: 0,
             table_beginning_index: 0,
-            operation_to_render: None
+            operation_to_render: None,
         }
     }
 }
@@ -299,11 +299,11 @@ impl AppState {
             if let Ok(opcode) = Operations::from_text(operation.op.as_str()) {
                 self.handle_opcode(opcode, operation.stack);
                 self.operation_to_render = Some(OperationData {
-                        operation_params: Operations::from_text(operation.op.as_str()).unwrap(),
-                        remaining_gas: operation.gas,
-                        gas_cost: operation.gas_cost,
-                        pc: operation.pc,
-                    });
+                    operation_params: Operations::from_text(operation.op.as_str()).unwrap(),
+                    remaining_gas: operation.gas,
+                    gas_cost: operation.gas_cost,
+                    pc: operation.pc,
+                });
             } else {
                 self.next_slot_status = SlotStatus::EMPTY;
             }

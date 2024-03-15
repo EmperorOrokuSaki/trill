@@ -6,8 +6,8 @@ use ratatui::{
     text::Line,
     widgets::{
         block::{Position, Title},
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-        ScrollbarState, StatefulWidget, Table, TableState, Widget,
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        StatefulWidget, Table, TableState, Widget,
     },
 };
 
@@ -137,19 +137,13 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
 
         let mut vec = vec![];
-        
+
         if let Some(op) = self.state.operation_to_render.as_ref() {
             vec.extend(vec![
                 Row::new(vec![
                     Cell::new("Code").style(Style::new().gray()),
-                    Cell::new(
-                        self.state
-                            .operation_codes
-                            .last()
-                            .unwrap()
-                            .text(),
-                    )
-                    .style(Style::new().red()),
+                    Cell::new(self.state.operation_codes.last().unwrap().text())
+                        .style(Style::new().red()),
                 ]),
                 Row::new(vec![
                     Cell::new("Gas cost").style(Style::new().gray()),
