@@ -158,6 +158,14 @@ impl<'a> RenderData<'a> {
                     Cell::new(op.pc.to_string()).style(Style::new().gray()),
                 ]),
             ]);
+            let params = &op.params;
+            for (key, value) in params.iter() {
+                vec.push(Row::new(vec![
+                    Cell::new(key.as_str()).style(Style::new().gray()),
+                    Cell::new(value.as_str())
+                        .style(Style::new().red()),
+                ]));
+            }            
         }
 
         let op_info_rows = vec;

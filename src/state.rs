@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use alloy::{
-    primitives::{fixed_bytes, Uint, U256},
+    primitives::{fixed_bytes, Address, Uint, U256},
     providers::Provider,
     rpc::types::{
         eth::Transaction,
@@ -32,7 +34,8 @@ pub struct AppState {
 
 #[derive(Debug, Clone)]
 pub struct OperationData {
-    pub operation_params: Operations,
+    pub operation: Operations,
+    pub params: HashMap<String, String>,
     pub remaining_gas: u64,
     pub gas_cost: u64,
     pub pc: u64,
@@ -56,11 +59,6 @@ impl Default for AppState {
             operation_to_render: None,
         }
     }
-}
-
-pub struct MstoreData {
-    pub offset: String,
-    pub value: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -297,12 +295,13 @@ impl AppState {
             }
 
             if let Ok(opcode) = Operations::from_text(operation.op.as_str()) {
-                self.handle_opcode(opcode, operation.stack);
+                let params = self.handle_opcode(opcode, operation.stack);
                 self.operation_to_render = Some(OperationData {
-                    operation_params: Operations::from_text(operation.op.as_str()).unwrap(),
+                    operation: Operations::from_text(operation.op.as_str()).unwrap(),
                     remaining_gas: operation.gas,
                     gas_cost: operation.gas_cost,
                     pc: operation.pc,
+                    params,
                 });
             } else {
                 self.next_slot_status = SlotStatus::EMPTY;
@@ -316,10 +315,11 @@ impl AppState {
         Ok(self)
     }
 
-    fn handle_opcode(&mut self, opcode: Operations, stack: Option<Vec<U256>>) {
+    fn handle_opcode(&mut self, opcode: Operations, stack: Option<Vec<U256>>) -> HashMap<String, String> {
         self.next_slot_status = SlotStatus::from_opcode(opcode);
+        let mut params : HashMap<String, String> = HashMap::new();
         // handle other changes that are applied to the already existing slots
-        match opcode {
+        return match opcode {
             Operations::MCOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset =
@@ -339,10 +339,18 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i * -1);
                 }
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::MSTORE => {
-                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                let unwrapped_stack = stack.as_ref().unwrap();
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Value".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::EXTCODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -356,6 +364,11 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                params.insert("Address".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<Address>().to_string());
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
+                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 4).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::CODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -369,6 +382,10 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::RETURNDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -382,16 +399,27 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::MSTORE8 => {
                 // Writes one byte value
                 // TODO: Check what happens if the offset is at the end of a slot and the value needs more space, does it overflow to the next slot?
-                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<i64>()];
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Value".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::MLOAD => {
-                let memory_offset = stack.as_ref().unwrap().last().unwrap() / Uint::from(32);
+                let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::CALLDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
@@ -405,10 +433,15 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                params.insert("Destination Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to::<u64>().to_string());
+                params.insert("Source Offset".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap().to::<u64>().to_string());
+                params.insert("Byte Size".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap().to::<u64>().to_string());
+                params
             }
             Operations::MSIZE => {
                 self.slot_indexes_to_change_status =
                     (0..self.indexed_slots_count).map(|x| x as i64).collect();
+                params
             }
         }
     }
