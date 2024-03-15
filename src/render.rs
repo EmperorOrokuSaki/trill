@@ -11,7 +11,7 @@ use ratatui::{
     },
 };
 
-use crate::state::{AppState, Operations, SlotStatus};
+use crate::state::{AppState, OperationData, Operations, SlotStatus};
 
 pub struct RenderData<'a> {
     pub area: Rect,
@@ -135,23 +135,37 @@ impl<'a> RenderData<'a> {
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::THICK);
-        let vec = vec![
-            Row::new(vec![
-                Cell::new("Op code").style(Style::new().gray()),
-                Cell::new(
-                    self.state
-                        .operation_codes
-                        .last()
-                        .unwrap_or(&Operations::MLOAD)
-                        .text(),
-                )
-                .style(Style::new().red()),
-            ]),
-            Row::new(vec![
-                Cell::new("Gas cost").style(Style::new().gray()),
-                Cell::new("3").style(Style::new().gray()),
-            ]),
-        ];
+
+        let mut vec = vec![];
+        
+        if let Some(op) = self.state.operation_to_render.as_ref() {
+            vec.extend(vec![
+                Row::new(vec![
+                    Cell::new("Code").style(Style::new().gray()),
+                    Cell::new(
+                        self.state
+                            .operation_codes
+                            .last()
+                            .unwrap()
+                            .text(),
+                    )
+                    .style(Style::new().red()),
+                ]),
+                Row::new(vec![
+                    Cell::new("Gas cost").style(Style::new().gray()),
+                    Cell::new(op.gas_cost.to_string()).style(Style::new().gray()),
+                ]),
+                Row::new(vec![
+                    Cell::new("Gas remaining").style(Style::new().gray()),
+                    Cell::new(op.remaining_gas.to_string()).style(Style::new().gray()),
+                ]),
+                Row::new(vec![
+                    Cell::new("Program Counter").style(Style::new().gray()),
+                    Cell::new(op.pc.to_string()).style(Style::new().gray()),
+                ]),
+            ]);
+        }
+
         let op_info_rows = vec;
         let op_info_table = Table::new(
             op_info_rows,
