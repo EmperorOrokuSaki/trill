@@ -1,12 +1,12 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
-    style::{Color, Modifier, Style, Stylize},
+    style::{Color, Style, Stylize},
     symbols::border,
-    text::{Line, Text},
+    text::Line,
     widgets::{
         block::{Position, Title},
-        Block, Borders, Cell, List, ListDirection, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, StatefulWidget, Table, TableState, Widget,
     },
 };
