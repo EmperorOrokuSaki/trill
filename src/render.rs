@@ -1,7 +1,8 @@
+use color_eyre::owo_colors::OwoColorize;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
-    style::{Color, Style, Stylize},
+    style::{Color, Style, Styled, Stylize},
     symbols::border,
     text::Line,
     widgets::{
@@ -89,6 +90,12 @@ impl<'a> RenderData<'a> {
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::THICK);
+        let success = match self.state.transaction_sucess {
+            true => {
+                Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().green())
+            }
+            false => Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().red()),
+        };
         let tx_info_rows = vec![
             Row::new(vec![
                 Cell::new("Hash").style(Style::new().gray().bold()),
@@ -112,7 +119,7 @@ impl<'a> RenderData<'a> {
             ]),
             Row::new(vec![
                 Cell::new("Success").style(Style::new().gray().bold()),
-                Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().green()),
+                success,
             ]),
             Row::new(vec![
                 Cell::new("Gas used").style(Style::new().gray().bold()),
@@ -139,11 +146,16 @@ impl<'a> RenderData<'a> {
         let mut vec = vec![];
 
         if let Some(op) = self.state.operation_to_render.as_ref() {
+            let operation_code = match SlotStatus::from_opcode(op.operation) {
+                SlotStatus::READING => Cell::new(op.operation.text()).style(Style::new().blue()),
+                SlotStatus::WRITING => Cell::new(op.operation.text()).style(Style::new().red()),
+                _ => Cell::new(op.operation.text()),
+            };
+
             vec.extend(vec![
                 Row::new(vec![
                     Cell::new("Code").style(Style::new().gray()),
-                    Cell::new(self.state.operation_codes.last().unwrap().text())
-                        .style(Style::new().red()),
+                    operation_code,
                 ]),
                 Row::new(vec![
                     Cell::new("Gas cost").style(Style::new().gray()),
@@ -162,7 +174,7 @@ impl<'a> RenderData<'a> {
             for (key, value) in params.iter() {
                 vec.push(Row::new(vec![
                     Cell::new(key.as_str()).style(Style::new().gray()),
-                    Cell::new(value.as_str()).style(Style::new().red()),
+                    Cell::new(value.as_str()).style(Style::new().green()),
                 ]));
             }
         }
@@ -201,7 +213,11 @@ impl<'a> RenderData<'a> {
             .state
             .operation_codes
             .iter()
-            .map(|op| Line::from(op.text()))
+            .map(|op| match SlotStatus::from_opcode(*op) {
+                SlotStatus::READING => Line::from(op.text()).style(Style::new().blue()),
+                SlotStatus::WRITING => Line::from(op.text()).style(Style::new().red()),
+                _ => Line::default(),
+            })
             .collect();
 
         let items_collection = Paragraph::new(items.clone())
