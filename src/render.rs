@@ -1,8 +1,7 @@
-use color_eyre::owo_colors::OwoColorize;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
-    style::{Color, Style, Styled, Stylize},
+    style::{Color, Style, Stylize},
     symbols::border,
     text::Line,
     widgets::{
@@ -12,7 +11,7 @@ use ratatui::{
     },
 };
 
-use crate::state::{AppState, OperationData, Operations, SlotStatus};
+use crate::state::{AppState, SlotStatus};
 
 pub struct RenderData<'a> {
     pub area: Rect,

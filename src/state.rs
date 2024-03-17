@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use alloy::{
-    primitives::{fixed_bytes, Address, Uint, U256},
+    primitives::{TxHash, Uint, U256},
     providers::Provider,
     rpc::types::{
         eth::Transaction,
@@ -140,11 +140,9 @@ impl SlotStatus {
 }
 
 impl AppState {
-    async fn initialize(&mut self) -> Result<(), eyre::Error> {
+    async fn initialize(&mut self, transaction: TxHash) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new().await?;
-        let tx_hash =
-            fixed_bytes!("970bf06f06ee47ce411f357b73b07a5267c72b838eb11950399144baa05e8740");
-        let transaction_result = provider.get_transaction_by_hash(tx_hash).await?;
+        let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
             config: GethDefaultTracingOptions {
@@ -162,7 +160,7 @@ impl AppState {
             timeout: None,
         };
 
-        let result = provider.debug_trace_transaction(tx_hash, opts).await?;
+        let result = provider.debug_trace_transaction(transaction, opts).await?;
 
         match result {
             GethTrace::JS(context) => {
@@ -584,12 +582,13 @@ impl AppState {
 
     pub async fn run(
         mut self,
+        transaction: TxHash,
         iteration: u64,
         forward: bool,
         pause: bool,
     ) -> Result<Self, eyre::Error> {
         if !self.initialized {
-            self.initialize().await?;
+            self.initialize(transaction).await?;
         }
         if pause {
             return Ok(self);

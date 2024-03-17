@@ -4,6 +4,7 @@ use crate::render::RenderData;
 use crate::state::AppState;
 use crate::tui::{self, Event};
 
+use alloy::primitives::TxHash;
 use crossterm::event::KeyCode::Char;
 use ratatui::prelude::*;
 
@@ -29,7 +30,7 @@ impl Default for App {
 }
 impl App {
     /// runs the application's main loop until the user quits
-    pub async fn run(&mut self) -> color_eyre::Result<()> {
+    pub async fn run(&mut self, transaction: TxHash) -> color_eyre::Result<()> {
         let mut tui = tui::Tui::new()?
             .tick_rate(2.0) // 4 ticks per second
             .frame_rate(1.0); // 30 frames per second
@@ -48,7 +49,14 @@ impl App {
 
                 self.scroll_table = None;
             }
-            app_state = AppState::run(app_state, self.iteration, self.forward, self.pause).await?;
+            app_state = AppState::run(
+                app_state,
+                transaction,
+                self.iteration,
+                self.forward,
+                self.pause,
+            )
+            .await?;
 
             tui.draw(|f| {
                 // Deref allows calling tui.terminal.draw
