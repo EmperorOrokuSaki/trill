@@ -2,12 +2,12 @@ use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Style, Stylize},
-    symbols::border,
+    symbols::{self, border},
     text::Line,
     widgets::{
         block::{Position, Title},
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        StatefulWidget, Table, TableState, Widget,
+        Axis, Block, Borders, Cell, Chart, Dataset, GraphType, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation, ScrollbarState, StatefulWidget, Table, TableState, Widget,
     },
 };
 
@@ -242,24 +242,71 @@ impl<'a> RenderData<'a> {
         );
     }
 
+    fn render_chart(&mut self, layout: Rect) {
+        let datasets = vec![
+            Dataset::default()
+                .name("data1")
+                // .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().cyan())
+                .data(&[(10.0, 5.0), (1.0, 6.0), (1.5, 6.434)]),
+            // Line chart
+            Dataset::default()
+                .name("data2")
+                // .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().cyan())
+                .data(&[(10.0, 5.0), (1.0, 6.0), (1.5, 6.434)]),
+        ];
+
+        // Create the X axis and define its properties
+        let x_axis = Axis::default()
+            .title("X Axis".red())
+            .style(Style::default().white())
+            .bounds([0.0, 10.0])
+            .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+
+        // Create the Y axis and define its properties
+        let y_axis = Axis::default()
+            .title("Y Axis".red())
+            .style(Style::default().white())
+            .bounds([0.0, 10.0])
+            .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+
+        // Create the chart and link all the parts together
+        let chart = Chart::new(datasets)
+            .block(Block::default().title("Chart"))
+            .x_axis(x_axis)
+            .y_axis(y_axis);
+
+        Widget::render(chart, layout, self.buf);
+    }
+
     pub fn render_all(&mut self) {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(self.area);
 
+        let bottom_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(90), Constraint::Percentage(10)])
+            .split(layout[1]);
+
+        let info_chart_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(bottom_layout[0]);
+
         let info_layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(vec![
-                Constraint::Percentage(40),
-                Constraint::Percentage(50),
-                Constraint::Percentage(10),
-            ])
-            .split(layout[1]);
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(info_chart_layout[0]);
 
         self.render_memory(layout[0]);
         self.render_transaction_box(info_layout[0]);
         self.render_current_operation_box(info_layout[1]);
-        self.render_operation_history(info_layout[2]);
+        self.render_operation_history(bottom_layout[1]);
+        self.render_chart(info_chart_layout[1]);
     }
 }

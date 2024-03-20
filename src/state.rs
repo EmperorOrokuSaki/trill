@@ -30,6 +30,8 @@ pub struct AppState {
     pub history_vertical_scroll: u16,
     pub table_beginning_index: u64,
     pub operation_to_render: Option<OperationData>,
+    pub slots_read_from: u64,
+    pub slots_written_to: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +59,8 @@ impl Default for AppState {
             history_vertical_scroll: 0,
             table_beginning_index: 0,
             operation_to_render: None,
+            slots_read_from: 0,
+            slots_written_to: 0,
         }
     }
 }
@@ -263,6 +267,12 @@ impl AppState {
                     self.indexed_slots_count += 1;
                 }
 
+                match self.next_slot_status {
+                    SlotStatus::READING => self.slots_read_from += new_slots,
+                    SlotStatus::WRITING => self.slots_written_to += new_slots,
+                    _ => {}
+                }
+
                 // handle slots that need to have their status changed but aren't new
                 for index in self.slot_indexes_to_change_status.clone() {
                     if index < 0 {
@@ -341,6 +351,7 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i * -1);
                 }
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
                 params.insert(
                     "Destination Offset".to_string(),
                     unwrapped_stack
@@ -370,6 +381,7 @@ impl AppState {
                 let unwrapped_stack = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
                 params.insert(
                     "Destination Offset".to_string(),
                     unwrapped_stack
@@ -399,6 +411,8 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
+
                 //params.insert("Address".to_string(), unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap().to_string());
                 params.insert(
                     "Destination Offset".to_string(),
@@ -437,6 +451,8 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
+
                 params.insert(
                     "Destination Offset".to_string(),
                     unwrapped_stack
@@ -474,6 +490,8 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
+
                 params.insert(
                     "Destination Offset".to_string(),
                     unwrapped_stack
@@ -513,6 +531,8 @@ impl AppState {
                         .to::<u64>()
                         .to_string(),
                 );
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
+
                 params.insert(
                     "Value".to_string(),
                     unwrapped_stack
@@ -526,6 +546,7 @@ impl AppState {
                 let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.to::<i64>()];
+                self.slots_read_from += self.slot_indexes_to_change_status.len() as u64;
                 params.insert(
                     "Source Offset".to_string(),
                     unwrapped_stack
@@ -547,6 +568,8 @@ impl AppState {
                 {
                     self.slot_indexes_to_change_status.push(i);
                 }
+                self.slots_written_to += self.slot_indexes_to_change_status.len() as u64;
+
                 params.insert(
                     "Destination Offset".to_string(),
                     unwrapped_stack
@@ -575,6 +598,7 @@ impl AppState {
             Operations::MSIZE => {
                 self.slot_indexes_to_change_status =
                     (0..self.indexed_slots_count).map(|x| x as i64).collect();
+                self.slots_read_from += self.slot_indexes_to_change_status.len() as u64;
             }
         };
         params
