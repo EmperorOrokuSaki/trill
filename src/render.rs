@@ -243,43 +243,52 @@ impl<'a> RenderData<'a> {
     }
 
     fn render_chart(&mut self, layout: Rect) {
-        let datasets = vec![
-            Dataset::default()
-                .name("Writes")
-                .marker(symbols::Marker::Dot)
-                .graph_type(GraphType::Line)
-                .style(Style::default().red())
-                .data(&self.state.write_dataset),
-            // Line chart
-            Dataset::default()
-                .name("Reads")
-                .marker(symbols::Marker::Dot)
-                .graph_type(GraphType::Line)
-                .style(Style::default().blue())
-                .data(&self.state.read_dataset),
-        ];
+        let divided_space = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(layout);
+
+        let write_dataset = vec![Dataset::default()
+            .name("Writes")
+            .marker(symbols::Marker::Dot)
+            .graph_type(GraphType::Line)
+            .style(Style::default().red())
+            .data(&self.state.write_dataset)];
+
+        let read_dataset = vec![Dataset::default()
+            .name("Reads")
+            .marker(symbols::Marker::Dot)
+            .graph_type(GraphType::Line)
+            .style(Style::default().blue())
+            .data(&self.state.read_dataset)];
 
         // Create the X axis and define its properties
         let x_axis = Axis::default()
             .title("Operations".red())
             .style(Style::default().white())
-            .bounds([0.0, 10.0])
-            .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+            .bounds([0.0, 1000.0])
+            .labels(vec!["0".into(), "500".into(), "1000".into()]);
 
         // Create the Y axis and define its properties
         let y_axis = Axis::default()
-            .title("Counts".red())
+            .title("Count".red())
             .style(Style::default().white())
-            .bounds([0.0, 10.0])
-            .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+            .bounds([0.0, 1000.0])
+            .labels(vec!["0".into(), "500".into(), "1000".into()]);
 
         // Create the chart and link all the parts together
-        let chart = Chart::new(datasets)
-            .block(Block::default().title("Reads/Writes"))
+        let write_chart = Chart::new(write_dataset)
+            .block(Block::default().title("Writes"))
+            .x_axis(x_axis.clone())
+            .y_axis(y_axis.clone());
+
+        let read_chart = Chart::new(read_dataset)
+            .block(Block::default().title("Reads"))
             .x_axis(x_axis)
             .y_axis(y_axis);
 
-        Widget::render(chart, layout, self.buf);
+        Widget::render(write_chart, divided_space[0], self.buf);
+        Widget::render(read_chart, divided_space[1], self.buf);
     }
 
     pub fn render_all(&mut self) {
