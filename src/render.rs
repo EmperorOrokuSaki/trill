@@ -245,37 +245,37 @@ impl<'a> RenderData<'a> {
     fn render_chart(&mut self, layout: Rect) {
         let datasets = vec![
             Dataset::default()
-                .name("data1")
-                // .marker(symbols::Marker::Dot)
+                .name("Writes")
+                .marker(symbols::Marker::Dot)
                 .graph_type(GraphType::Line)
-                .style(Style::default().cyan())
-                .data(&[(10.0, 5.0), (1.0, 6.0), (1.5, 6.434)]),
+                .style(Style::default().red())
+                .data(&self.state.write_dataset),
             // Line chart
             Dataset::default()
-                .name("data2")
-                // .marker(symbols::Marker::Dot)
+                .name("Reads")
+                .marker(symbols::Marker::Dot)
                 .graph_type(GraphType::Line)
-                .style(Style::default().cyan())
-                .data(&[(10.0, 5.0), (1.0, 6.0), (1.5, 6.434)]),
+                .style(Style::default().blue())
+                .data(&self.state.read_dataset),
         ];
 
         // Create the X axis and define its properties
         let x_axis = Axis::default()
-            .title("X Axis".red())
+            .title("Operations".red())
             .style(Style::default().white())
             .bounds([0.0, 10.0])
             .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
 
         // Create the Y axis and define its properties
         let y_axis = Axis::default()
-            .title("Y Axis".red())
+            .title("Counts".red())
             .style(Style::default().white())
             .bounds([0.0, 10.0])
             .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
 
         // Create the chart and link all the parts together
         let chart = Chart::new(datasets)
-            .block(Block::default().title("Chart"))
+            .block(Block::default().title("Reads/Writes"))
             .x_axis(x_axis)
             .y_axis(y_axis);
 
