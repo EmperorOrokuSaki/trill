@@ -2,7 +2,7 @@
 name = "trill"
 version = "0.1.0"
 edition = "2021"
-description = "A CLI blockchain explorer compatible with EVM-supporting chains."
+description = "A TUI memory profiler tool for EVM smart contracts"
 
 [dependencies]
 crossterm = { version = "0.27.0", features = ["event-stream"] }
