@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use alloy::{
     primitives::{TxHash, Uint, U256},
@@ -247,6 +247,7 @@ impl AppState {
             }
         }
         let mut exit_loop = false;
+        //sleep(Duration::from_secs(1));
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
             let operation = self.raw_data[operation_number as usize].clone();
@@ -277,12 +278,21 @@ impl AppState {
                             (0.0, 0.0)
                         }
                     };
+                    let last_read = match self.read_dataset.last() {
+                        Some(&value) => value,
+                        None => {
+                            // Handle the case when the vector is empty
+                            // For example, you might want to return an error or use a default value.
+                            // Here, we'll just use a default value of 0.
+                            (0.0, 0.0)
+                        }
+                    };
 
                     let indexes_to_fill = operation_number as usize - self.write_dataset.len();
                     self.write_dataset
                         .extend(std::iter::repeat(last_write).take(indexes_to_fill));
                     self.read_dataset
-                        .extend(std::iter::repeat(last_write).take(indexes_to_fill));
+                        .extend(std::iter::repeat(last_read).take(indexes_to_fill));
                 }
 
                 match self.next_slot_status {
