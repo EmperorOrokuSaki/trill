@@ -168,8 +168,8 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                // std::fs::write("result3.json", context.to_string())
-                //     .expect("Failed to write to file");
+                std::fs::write("result3.json", context.to_string())
+                    .expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
@@ -247,11 +247,13 @@ impl AppState {
             }
         }
         let mut exit_loop = false;
-        //sleep(Duration::from_secs(1));
+
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
             let operation = self.raw_data[operation_number as usize].clone();
-            if self.next_slot_status != SlotStatus::EMPTY {
+            if self.next_slot_status != SlotStatus::EMPTY
+                && self.next_slot_status != SlotStatus::INIT
+            {
                 // Condition to check if the memory is affected in this operation as a result of the previous operation
                 // Memory is affected
                 let memory = operation.memory.as_ref().unwrap();
@@ -268,33 +270,6 @@ impl AppState {
                     self.indexed_slots_count += 1;
                 }
 
-                if operation_number > self.write_dataset.len() as u64 {
-                    let last_write = match self.write_dataset.last() {
-                        Some(&value) => value,
-                        None => {
-                            // Handle the case when the vector is empty
-                            // For example, you might want to return an error or use a default value.
-                            // Here, we'll just use a default value of 0.
-                            (0.0, 0.0)
-                        }
-                    };
-                    let last_read = match self.read_dataset.last() {
-                        Some(&value) => value,
-                        None => {
-                            // Handle the case when the vector is empty
-                            // For example, you might want to return an error or use a default value.
-                            // Here, we'll just use a default value of 0.
-                            (0.0, 0.0)
-                        }
-                    };
-
-                    let indexes_to_fill = operation_number as usize - self.write_dataset.len();
-                    self.write_dataset
-                        .extend(std::iter::repeat(last_write).take(indexes_to_fill));
-                    self.read_dataset
-                        .extend(std::iter::repeat(last_read).take(indexes_to_fill));
-                }
-
                 match self.next_slot_status {
                     SlotStatus::READING => {
                         let new_number = self.read_dataset.last().unwrap_or(&(0.0, 0.0)).1
@@ -302,6 +277,25 @@ impl AppState {
                             + self.slot_indexes_to_change_status.len() as f64;
                         self.read_dataset
                             .push((operation_number as f64, new_number));
+
+                        if new_slots > 0 {
+                            self.write_dataset.push((
+                                operation_number as f64,
+                                self.read_dataset.last().unwrap_or(&(0.0, 0.0)).1
+                                    + new_slots as f64,
+                            ));
+                        } else {
+                            let last_write = match self.write_dataset.last() {
+                                Some(&value) => (operation_number as f64, value.1),
+                                None => {
+                                    // Handle the case when the vector is empty
+                                    // For example, you might want to return an error or use a default value.
+                                    // Here, we'll just use a default value of 0.
+                                    (operation_number as f64, 0.0)
+                                }
+                            };
+                            self.write_dataset.push(last_write);
+                        }
                     }
                     SlotStatus::WRITING => {
                         let new_number = self.write_dataset.last().unwrap_or(&(0.0, 0.0)).1
@@ -309,6 +303,16 @@ impl AppState {
                             + self.slot_indexes_to_change_status.len() as f64;
                         self.write_dataset
                             .push((operation_number as f64, new_number));
+                        let last_read = match self.read_dataset.last() {
+                            Some(&value) => (operation_number as f64, value.1),
+                            None => {
+                                // Handle the case when the vector is empty
+                                // For example, you might want to return an error or use a default value.
+                                // Here, we'll just use a default value of 0.
+                                (operation_number as f64, 0.0)
+                            }
+                        };
+                        self.read_dataset.push(last_read);
                     }
                     _ => {}
                 }
@@ -334,12 +338,34 @@ impl AppState {
                         .unwrap(),
                     )
                 }
+            } else {
+                let last_write = match self.write_dataset.last() {
+                    Some(&value) => (operation_number as f64, value.1),
+                    None => {
+                        // Handle the case when the vector is empty
+                        // For example, you might want to return an error or use a default value.
+                        // Here, we'll just use a default value of 0.
+                        (operation_number as f64, 0.0)
+                    }
+                };
+                let last_read = match self.read_dataset.last() {
+                    Some(&value) => (operation_number as f64, value.1),
+                    None => {
+                        // Handle the case when the vector is empty
+                        // For example, you might want to return an error or use a default value.
+                        // Here, we'll just use a default value of 0.
+                        (operation_number as f64, 0.0)
+                    }
+                };
 
-                // exit if it's the last iter
-                if operation_number - self.next_operation + 1 >= iteration {
-                    self.next_operation = operation_number + 1;
-                    exit_loop = true;
-                }
+                self.write_dataset.push(last_write);
+                self.read_dataset.push(last_read);
+            }
+
+            // exit if it's the last iter
+            if operation_number - self.next_operation + 1 >= iteration {
+                self.next_operation = operation_number + 1;
+                exit_loop = true;
             }
 
             if let Ok(opcode) = Operations::from_text(operation.op.as_str()) {

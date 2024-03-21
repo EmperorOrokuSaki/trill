@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
@@ -10,6 +12,7 @@ use ratatui::{
         ScrollbarOrientation, ScrollbarState, StatefulWidget, Table, TableState, Widget,
     },
 };
+use tokio::time::sleep;
 
 use crate::state::{AppState, SlotStatus};
 
@@ -248,6 +251,20 @@ impl<'a> RenderData<'a> {
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(layout);
 
+        let write_title = Title::from(" Writes ".bold().red());
+
+        let write_block = Block::default()
+            .title(write_title.alignment(Alignment::Center))
+            .borders(Borders::ALL)
+            .border_set(border::THICK);
+
+        let read_title = Title::from(" Reads ".bold().blue());
+
+        let read_block = Block::default()
+            .title(read_title.alignment(Alignment::Center))
+            .borders(Borders::ALL)
+            .border_set(border::THICK);
+
         let write_dataset = vec![Dataset::default()
             .name("Writes")
             .marker(symbols::Marker::Dot)
@@ -262,30 +279,54 @@ impl<'a> RenderData<'a> {
             .style(Style::default().blue())
             .data(&self.state.read_dataset)];
 
+        if self.state.write_dataset.len() > self.state.read_dataset.len() {
+            dbg!("DISCREPANCY");
+        }
+
         // Create the X axis and define its properties
         let x_axis = Axis::default()
-            .title("Operations".red())
             .style(Style::default().white())
-            .bounds([0.0, 1000.0])
-            .labels(vec!["0".into(), "500".into(), "1000".into()]);
+            .bounds([0.0, self.state.write_dataset.len() as f64])
+            .labels(vec![
+                "0".into(),
+                self.state.write_dataset.len().to_string().into(),
+            ]);
 
         // Create the Y axis and define its properties
-        let y_axis = Axis::default()
-            .title("Count".red())
+        let write_y_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, 1000.0])
-            .labels(vec!["0".into(), "500".into(), "1000".into()]);
+            .bounds([0.0, self.state.write_dataset.last().unwrap().1 as f64])
+            .labels(vec![
+                "0".into(),
+                (self.state.write_dataset.last().unwrap().1)
+                    .ceil()
+                    .to_string()
+                    .into(),
+            ]);
+
+        let read_y_axis = Axis::default()
+            .style(Style::default().white())
+            .bounds([0.0, self.state.read_dataset.last().unwrap().1 as f64])
+            .labels(vec![
+                "0".into(),
+                (self.state.read_dataset.last().unwrap().1)
+                    .ceil()
+                    .to_string()
+                    .into(),
+            ]);
 
         // Create the chart and link all the parts together
         let write_chart = Chart::new(write_dataset)
             .block(Block::default().title("Writes"))
             .x_axis(x_axis.clone())
-            .y_axis(y_axis.clone());
+            .y_axis(write_y_axis.clone())
+            .block(write_block);
 
         let read_chart = Chart::new(read_dataset)
             .block(Block::default().title("Reads"))
             .x_axis(x_axis)
-            .y_axis(y_axis);
+            .y_axis(read_y_axis)
+            .block(read_block);
 
         Widget::render(write_chart, divided_space[0], self.buf);
         Widget::render(read_chart, divided_space[1], self.buf);
