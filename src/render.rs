@@ -27,12 +27,12 @@ impl<'a> RenderData<'a> {
         // dbg!(&layout.width);
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
-            " Back ".into(),
-            "<Left>".green().bold(),
+            " Up ".into(),
+            "<W>".green().bold(),
             " Pause ".into(),
             "<Space>".yellow().bold(),
-            " Forward ".into(),
-            "<Right>".green().bold(),
+            " Down ".into(),
+            "<S>".green().bold(),
             " Quit ".into(),
             "<Q> ".red().bold(),
         ]));
