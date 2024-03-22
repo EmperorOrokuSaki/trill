@@ -65,7 +65,7 @@ impl Default for AppState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Operations {
     MSTORE,
     MSTORE8,
@@ -76,10 +76,11 @@ pub enum Operations {
     CODECOPY,
     RETURNDATACOPY,
     MCOPY,
+    OTHER(String),
 }
 
 impl Operations {
-    pub fn text(&self) -> &'static str {
+    pub fn text(&self) -> &str {
         match self {
             Operations::MSTORE => "MSTORE",
             Operations::MSTORE8 => "MSTORE8",
@@ -90,20 +91,21 @@ impl Operations {
             Operations::EXTCODECOPY => "EXTCODECOPY",
             Operations::CODECOPY => "CODECOPY",
             Operations::RETURNDATACOPY => "RETURNDATACOPY",
+            Operations::OTHER(op) => op.as_str(),
         }
     }
-    pub fn from_text(op: &str) -> Result<Self, ()> {
+    pub fn from_text(op: &str) -> Self {
         match op {
-            "MSTORE" => return Ok(Operations::MSTORE),
-            "MSTORE8" => return Ok(Operations::MSTORE8),
-            "MLOAD" => return Ok(Operations::MLOAD),
-            "MCOPY" => return Ok(Operations::MCOPY),
-            "CALLDATACOPY" => return Ok(Operations::CALLDATACOPY),
-            "MSIZE" => return Ok(Operations::MSIZE),
-            "EXTCODECOPY" => return Ok(Operations::EXTCODECOPY),
-            "CODECOPY" => return Ok(Operations::CODECOPY),
-            "RETURNDATACOPY" => return Ok(Operations::RETURNDATACOPY),
-            _ => return Err(()),
+            "MSTORE" => Operations::MSTORE,
+            "MSTORE8" => Operations::MSTORE8,
+            "MLOAD" => Operations::MLOAD,
+            "MCOPY" => Operations::MCOPY,
+            "CALLDATACOPY" => Operations::CALLDATACOPY,
+            "MSIZE" => Operations::MSIZE,
+            "EXTCODECOPY" => Operations::EXTCODECOPY,
+            "CODECOPY" => Operations::CODECOPY,
+            "RETURNDATACOPY" => Operations::RETURNDATACOPY,
+            _ => Operations::OTHER(op.to_string()),
         }
     }
 }
@@ -128,7 +130,7 @@ impl SlotStatus {
         }
     }
 
-    pub fn from_opcode(op: Operations) -> SlotStatus {
+    pub fn from_opcode(op: &Operations) -> SlotStatus {
         match op {
             Operations::CALLDATACOPY => SlotStatus::WRITING,
             Operations::MSTORE => SlotStatus::WRITING,
@@ -139,6 +141,7 @@ impl SlotStatus {
             Operations::CODECOPY => SlotStatus::WRITING,
             Operations::RETURNDATACOPY => SlotStatus::WRITING,
             Operations::MCOPY => SlotStatus::WRITING,
+            Operations::OTHER(_) => SlotStatus::EMPTY,
         }
     }
 }
@@ -197,13 +200,12 @@ impl AppState {
             .iter()
             .rev()
             .enumerate()
-            .find_map(|(index, operation)| {
-                if Operations::from_text(operation.op.as_str()).is_ok() {
-                    Some(index)
-                } else {
-                    None
-                }
-            })
+            .find_map(
+                |(index, operation)| match Operations::from_text(operation.op.as_str()) {
+                    Operations::OTHER(_) => None,
+                    _ => Some(index),
+                },
+            )
             .map(|index| to_index as usize - index - 1);
 
         if last_memory_affecting_op_index.is_none() {
@@ -211,7 +213,7 @@ impl AppState {
         } else {
             let operation = &self.raw_data[last_memory_affecting_op_index.unwrap()];
             self.next_slot_status =
-                SlotStatus::from_opcode(Operations::from_text(operation.op.as_str()).unwrap());
+                SlotStatus::from_opcode(&Operations::from_text(operation.op.as_str()));
             self.next_operation = last_memory_affecting_op_index.unwrap() as u64 + 2;
             for (index, slot) in self.slots.iter_mut().enumerate() {
                 if index
@@ -331,12 +333,9 @@ impl AppState {
 
                 // push opcode to history
                 if operation_number != 0 {
-                    self.operation_codes.push(
-                        Operations::from_text(
-                            self.raw_data[(operation_number - 1) as usize].op.as_str(),
-                        )
-                        .unwrap(),
-                    )
+                    self.operation_codes.push(Operations::from_text(
+                        self.raw_data[(operation_number - 1) as usize].op.as_str(),
+                    ))
                 }
             } else {
                 let last_write = match self.write_dataset.last() {
@@ -368,17 +367,30 @@ impl AppState {
                 exit_loop = true;
             }
 
-            if let Ok(opcode) = Operations::from_text(operation.op.as_str()) {
-                let params = self.handle_opcode(opcode, operation.stack);
-                self.operation_to_render = Some(OperationData {
-                    operation: Operations::from_text(operation.op.as_str()).unwrap(),
-                    remaining_gas: operation.gas,
-                    gas_cost: operation.gas_cost,
-                    pc: operation.pc,
-                    params,
-                });
-            } else {
-                self.next_slot_status = SlotStatus::EMPTY;
+            match Operations::from_text(operation.op.as_str()) {
+                Operations::OTHER(op) => {
+                    self.operation_to_render = Some(OperationData {
+                        operation: Operations::from_text(&op),
+                        remaining_gas: operation.gas,
+                        gas_cost: operation.gas_cost,
+                        pc: operation.pc,
+                        params: HashMap::new(),
+                    });
+                    self.next_slot_status = SlotStatus::EMPTY;
+                }
+                _ => {
+                    let params = self.handle_opcode(
+                        Operations::from_text(operation.op.as_str()),
+                        operation.stack,
+                    );
+                    self.operation_to_render = Some(OperationData {
+                        operation: Operations::from_text(operation.op.as_str()),
+                        remaining_gas: operation.gas,
+                        gas_cost: operation.gas_cost,
+                        pc: operation.pc,
+                        params,
+                    });
+                }
             }
 
             if exit_loop {
@@ -394,7 +406,7 @@ impl AppState {
         opcode: Operations,
         stack: Option<Vec<U256>>,
     ) -> HashMap<String, String> {
-        self.next_slot_status = SlotStatus::from_opcode(opcode);
+        self.next_slot_status = SlotStatus::from_opcode(&opcode);
         let mut params: HashMap<String, String> = HashMap::new();
         // handle other changes that are applied to the already existing slots
         match opcode {
@@ -655,6 +667,7 @@ impl AppState {
                 self.slot_indexes_to_change_status =
                     (0..self.indexed_slots_count).map(|x| x as i64).collect();
             }
+            Operations::OTHER(_) => {}
         };
         params
     }

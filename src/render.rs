@@ -148,7 +148,7 @@ impl<'a> RenderData<'a> {
         let mut vec = vec![];
 
         if let Some(op) = self.state.operation_to_render.as_ref() {
-            let operation_code = match SlotStatus::from_opcode(op.operation) {
+            let operation_code = match SlotStatus::from_opcode(&op.operation) {
                 SlotStatus::READING => Cell::new(op.operation.text()).style(Style::new().blue()),
                 SlotStatus::WRITING => Cell::new(op.operation.text()).style(Style::new().red()),
                 _ => Cell::new(op.operation.text()),
@@ -215,7 +215,7 @@ impl<'a> RenderData<'a> {
             .state
             .operation_codes
             .iter()
-            .map(|op| match SlotStatus::from_opcode(*op) {
+            .map(|op| match SlotStatus::from_opcode(op) {
                 SlotStatus::READING => Line::from(op.text()).style(Style::new().blue()),
                 SlotStatus::WRITING => Line::from(op.text()).style(Style::new().red()),
                 _ => Line::default(),
