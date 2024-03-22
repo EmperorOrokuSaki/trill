@@ -149,9 +149,9 @@ impl<'a> RenderData<'a> {
 
         if let Some(op) = self.state.operation_to_render.as_ref() {
             let operation_code = match SlotStatus::from_opcode(&op.operation) {
-                SlotStatus::READING => Cell::new(op.operation.text()).style(Style::new().blue()),
-                SlotStatus::WRITING => Cell::new(op.operation.text()).style(Style::new().red()),
-                _ => Cell::new(op.operation.text()),
+                SlotStatus::READING => Cell::new(op.operation.text()).blue(),
+                SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
+                _ => Cell::new(op.operation.text()).yellow(),
             };
 
             vec.extend(vec![

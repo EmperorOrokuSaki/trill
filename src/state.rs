@@ -369,8 +369,9 @@ impl AppState {
 
             match Operations::from_text(operation.op.as_str()) {
                 Operations::OTHER(op) => {
+                    let operation_text = Operations::from_text(&op); // Reuse the result
                     self.operation_to_render = Some(OperationData {
-                        operation: Operations::from_text(&op),
+                        operation: operation_text.clone(), // Clone to avoid moving
                         remaining_gas: operation.gas,
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
@@ -379,12 +380,10 @@ impl AppState {
                     self.next_slot_status = SlotStatus::EMPTY;
                 }
                 _ => {
-                    let params = self.handle_opcode(
-                        Operations::from_text(operation.op.as_str()),
-                        operation.stack,
-                    );
+                    let operation_text = Operations::from_text(operation.op.as_str()); // Only one call
+                    let params = self.handle_opcode(operation_text.clone(), operation.stack); // Clone for reuse
                     self.operation_to_render = Some(OperationData {
-                        operation: Operations::from_text(operation.op.as_str()),
+                        operation: operation_text,
                         remaining_gas: operation.gas,
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
@@ -392,6 +391,7 @@ impl AppState {
                     });
                 }
             }
+            
 
             if exit_loop {
                 break;
