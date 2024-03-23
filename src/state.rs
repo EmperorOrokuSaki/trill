@@ -248,7 +248,6 @@ impl AppState {
                 *slot = SlotStatus::ACTIVE;
             }
         }
-        let mut exit_loop = false;
 
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
@@ -335,7 +334,7 @@ impl AppState {
                 if operation_number != 0 {
                     self.operation_codes.push(Operations::from_text(
                         self.raw_data[(operation_number - 1) as usize].op.as_str(),
-                    ))
+                    ));
                 }
             } else {
                 let last_write = match self.write_dataset.last() {
@@ -359,12 +358,6 @@ impl AppState {
 
                 self.write_dataset.push(last_write);
                 self.read_dataset.push(last_read);
-            }
-
-            // exit if it's the last iter
-            if operation_number - self.next_operation + 1 >= iteration {
-                self.next_operation = operation_number + 1;
-                exit_loop = true;
             }
 
             match Operations::from_text(operation.op.as_str()) {
@@ -391,9 +384,10 @@ impl AppState {
                     });
                 }
             }
-            
 
-            if exit_loop {
+            // exit if it's the last iter
+            if operation_number - self.next_operation + 1 >= iteration {
+                self.next_operation = operation_number + 1;
                 break;
             }
         }

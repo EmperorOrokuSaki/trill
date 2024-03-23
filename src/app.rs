@@ -32,7 +32,7 @@ impl App {
     /// runs the application's main loop until the user quits
     pub async fn run(&mut self, transaction: TxHash) -> color_eyre::Result<()> {
         let mut tui = tui::Tui::new()?
-            .tick_rate(2.0) // 4 ticks per second
+            .tick_rate(5.0) // 4 ticks per second
             .frame_rate(1.0); // 30 frames per second
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
