@@ -99,6 +99,7 @@ async fn main() -> Result<()> {
     initialize_logging()?;
     let cli = Cli::parse();
     let transaction = TxHash::from_str(cli.transaction.as_str())?;
-    App::default().run(transaction).await?;
+    let speed = cli.speed;
+    App::default().run(transaction, speed).await?;
     Ok(())
 }

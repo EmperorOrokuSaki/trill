@@ -29,8 +29,8 @@ impl Default for App {
 }
 impl App {
     /// runs the application's main loop until the user quits
-    pub async fn run(&mut self, transaction: TxHash) -> color_eyre::Result<()> {
-        let mut tui = tui::Tui::new()?.frame_rate(4.0); // 30 frames per second
+    pub async fn run(&mut self, transaction: TxHash, speed: f64) -> color_eyre::Result<()> {
+        let mut tui = tui::Tui::new()?.frame_rate(speed);
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
