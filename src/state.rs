@@ -13,6 +13,7 @@ use alloy::{
 };
 use color_eyre::eyre;
 use opcode_parser::Operations;
+use tracing::{event, Level};
 
 use crate::provider;
 
@@ -30,7 +31,7 @@ pub struct AppState {
     pub transaction_sucess: bool,
     pub history_vertical_scroll: u16,
     pub table_beginning_index: u64,
-    pub operation_to_render: Option<OperationData>,
+    pub operation_to_render: OperationData,
     pub read_dataset: Vec<(f64, f64)>,
     pub write_dataset: Vec<(f64, f64)>,
 }
@@ -42,6 +43,18 @@ pub struct OperationData {
     pub remaining_gas: u64,
     pub gas_cost: u64,
     pub pc: u64,
+}
+
+impl Default for OperationData {
+    fn default() -> Self {
+        Self {
+            operation: Operations::OTHER("".to_string()),
+            params: HashMap::new(),
+            remaining_gas: 0,
+            gas_cost: 0,
+            pc: 0,
+        }
+    }
 }
 
 impl Default for AppState {
@@ -59,7 +72,7 @@ impl Default for AppState {
             slot_indexes_to_change_status: vec![],
             history_vertical_scroll: 0,
             table_beginning_index: 0,
-            operation_to_render: None,
+            operation_to_render: OperationData::default(),
             read_dataset: vec![],
             write_dataset: vec![],
         }
@@ -319,25 +332,25 @@ impl AppState {
             match Operations::from_text(operation.op.as_str()) {
                 Operations::OTHER(op) => {
                     let operation_text = Operations::from_text(&op); // Reuse the result
-                    self.operation_to_render = Some(OperationData {
+                    self.operation_to_render = OperationData {
                         operation: operation_text.clone(), // Clone to avoid moving
                         remaining_gas: operation.gas,
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
                         params: HashMap::new(),
-                    });
+                    };
                     self.next_slot_status = SlotStatus::EMPTY;
                 }
                 _ => {
                     let operation_text = Operations::from_text(operation.op.as_str()); // Only one call
                     self.handle_opcode(operation_text.clone(), operation.stack.clone());
-                    self.operation_to_render = Some(OperationData {
+                    self.operation_to_render = OperationData {
                         operation: operation_text.clone(),
                         remaining_gas: operation.gas,
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
                         params: operation_text.parse_args(operation.stack),
-                    });
+                    };
                 }
             }
 

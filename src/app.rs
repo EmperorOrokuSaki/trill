@@ -6,7 +6,9 @@ use crate::tui::{self, Event};
 
 use alloy::primitives::TxHash;
 use crossterm::event::KeyCode::Char;
+use crossterm::event::KeyEvent;
 use ratatui::prelude::*;
+use tracing::{event, Level};
 
 #[derive(Debug)]
 pub struct App {
@@ -32,8 +34,8 @@ impl App {
     /// runs the application's main loop until the user quits
     pub async fn run(&mut self, transaction: TxHash) -> color_eyre::Result<()> {
         let mut tui = tui::Tui::new()?
-            .tick_rate(5.0) // 4 ticks per second
-            .frame_rate(1.0); // 30 frames per second
+            .tick_rate(1.0) // 4 ticks per second
+            .frame_rate(4.0); // 30 frames per second
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
@@ -49,6 +51,7 @@ impl App {
 
                 self.scroll_table = None;
             }
+
             app_state = AppState::run(
                 app_state,
                 transaction,
@@ -57,17 +60,39 @@ impl App {
                 self.pause,
             )
             .await?;
+            event!(
+                Level::INFO,
+                "FROM RUN 1 APP.RS: {}",
+                app_state.write_dataset.len()
+            );
 
-            tui.draw(|f| {
-                // Deref allows calling tui.terminal.draw
-                self.render_frame(f, &mut app_state);
-            })?;
-            self.forward = true;
             if let Some(evt) = tui.next().await {
-                // tui.next().await blocks till next event
-                self.handle_event(evt, &mut app_state)?;
+                match evt {
+                    Event::Render => {
+                        tui.draw(|f| {
+                            event!(
+                                Level::INFO,
+                                "FROM RUN APP.RS: {}",
+                                app_state.write_dataset.len()
+                            );
+                            self.render_frame(f, &mut app_state);
+                        })?;
+                    }
+                    Event::Key(key) => {
+                        self.handle_event(key, &mut app_state);
+                    }
+                    _ => {
+                        event!(
+                            Level::INFO,
+                            "PASS"
+                        );
+                        event!(
+                            Level::INFO,
+                            "{:?}", &evt
+                        );
+                    }
+                }
             };
-
             if self.exit {
                 break;
             }
@@ -79,30 +104,32 @@ impl App {
     }
 
     fn render_frame(&self, frame: &mut Frame, mut state: &mut AppState) {
+        event!(
+            Level::INFO,
+            "FROM RENDER FRAME APP.RS: {}",
+            state.write_dataset.len()
+        );
         frame.render_stateful_widget(self, frame.size(), &mut state);
     }
 
-    fn handle_event(&mut self, event: Event, state: &mut AppState) -> io::Result<()> {
-        if let Event::Key(key) = event {
-            match key.code {
-                Char('q') => self.exit = true,
-                crossterm::event::KeyCode::Left => self.forward = false,
-                crossterm::event::KeyCode::Right => self.forward = true,
-                crossterm::event::KeyCode::Down => {
-                    state.history_vertical_scroll = state.history_vertical_scroll + 1
-                }
-                crossterm::event::KeyCode::Up => {
-                    if state.history_vertical_scroll > 0 {
-                        state.history_vertical_scroll -= 1;
-                    }
-                }
-                Char(' ') => self.pause = !self.pause,
-                Char('w') => self.scroll_table = Some(false),
-                Char('s') => self.scroll_table = Some(true),
-                _ => {}
+    fn handle_event(&mut self, key: KeyEvent, state: &mut AppState) {
+        match key.code {
+            Char('q') => self.exit = true,
+            crossterm::event::KeyCode::Left => self.forward = false,
+            crossterm::event::KeyCode::Right => self.forward = true,
+            crossterm::event::KeyCode::Down => {
+                state.history_vertical_scroll = state.history_vertical_scroll + 1
             }
+            crossterm::event::KeyCode::Up => {
+                if state.history_vertical_scroll > 0 {
+                    state.history_vertical_scroll -= 1;
+                }
+            }
+            Char(' ') => self.pause = !self.pause,
+            Char('w') => self.scroll_table = Some(false),
+            Char('s') => self.scroll_table = Some(true),
+            _ => {}
         }
-        Ok(())
     }
 }
 

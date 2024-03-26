@@ -13,6 +13,7 @@ use ratatui::{
     },
 };
 use tokio::time::sleep;
+use tracing::{event, Level};
 
 use crate::state::{AppState, SlotStatus};
 
@@ -146,39 +147,39 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
 
         let mut vec = vec![];
+        let op = &self.state.operation_to_render;
+        let operation_code = match SlotStatus::from_opcode(&op.operation) {
+            SlotStatus::READING => Cell::new(op.operation.text()).blue(),
+            SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
+            _ => Cell::new(op.operation.text()).yellow(),
+        };
 
-        if let Some(op) = self.state.operation_to_render.as_ref() {
-            let operation_code = match SlotStatus::from_opcode(&op.operation) {
-                SlotStatus::READING => Cell::new(op.operation.text()).blue(),
-                SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
-                _ => Cell::new(op.operation.text()).yellow(),
-            };
+        event!(Level::INFO, "FROM RENDER.RS: {}", self.state.write_dataset.len());
 
-            vec.extend(vec![
-                Row::new(vec![
-                    Cell::new("Code").style(Style::new().gray()),
-                    operation_code,
-                ]),
-                Row::new(vec![
-                    Cell::new("Gas cost").style(Style::new().gray()),
-                    Cell::new(op.gas_cost.to_string()).style(Style::new().gray()),
-                ]),
-                Row::new(vec![
-                    Cell::new("Gas remaining").style(Style::new().gray()),
-                    Cell::new(op.remaining_gas.to_string()).style(Style::new().gray()),
-                ]),
-                Row::new(vec![
-                    Cell::new("Program Counter").style(Style::new().gray()),
-                    Cell::new(op.pc.to_string()).style(Style::new().gray()),
-                ]),
-            ]);
-            let params = &op.params;
-            for (key, value) in params.iter() {
-                vec.push(Row::new(vec![
-                    Cell::new(key.as_str()).style(Style::new().gray()),
-                    Cell::new(value.as_str()).style(Style::new().green()),
-                ]));
-            }
+        vec.extend(vec![
+            Row::new(vec![
+                Cell::new("Code").style(Style::new().gray()),
+                operation_code,
+            ]),
+            Row::new(vec![
+                Cell::new("Gas cost").style(Style::new().gray()),
+                Cell::new(op.gas_cost.to_string()).style(Style::new().gray()),
+            ]),
+            Row::new(vec![
+                Cell::new("Gas remaining").style(Style::new().gray()),
+                Cell::new(op.remaining_gas.to_string()).style(Style::new().gray()),
+            ]),
+            Row::new(vec![
+                Cell::new("Program Counter").style(Style::new().gray()),
+                Cell::new(op.pc.to_string()).style(Style::new().gray()),
+            ]),
+        ]);
+        let params = &op.params;
+        for (key, value) in params.iter() {
+            vec.push(Row::new(vec![
+                Cell::new(key.as_str()).style(Style::new().gray()),
+                Cell::new(value.as_str()).style(Style::new().green()),
+            ]));
         }
 
         let op_info_rows = vec;
