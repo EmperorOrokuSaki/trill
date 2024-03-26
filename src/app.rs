@@ -99,6 +99,7 @@ impl App {
             Char(' ') => self.pause = !self.pause,
             Char('w') => self.scroll_table = Some(false),
             Char('s') => self.scroll_table = Some(true),
+            Char('h') => state.help = !state.help,
             _ => {}
         }
     }

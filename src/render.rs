@@ -353,5 +353,10 @@ impl<'a> RenderData<'a> {
         self.render_current_operation_box(info_layout[1]);
         self.render_operation_history(bottom_layout[1]);
         self.render_chart(info_chart_layout[1]);
+
+        if self.state.help {
+            // display help box
+        }
+
     }
 }

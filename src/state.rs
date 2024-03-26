@@ -33,6 +33,7 @@ pub struct AppState {
     pub operation_to_render: OperationData,
     pub read_dataset: Vec<(f64, f64)>,
     pub write_dataset: Vec<(f64, f64)>,
+    pub help: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +75,7 @@ impl Default for AppState {
             operation_to_render: OperationData::default(),
             read_dataset: vec![],
             write_dataset: vec![],
+            help: false
         }
     }
 }
