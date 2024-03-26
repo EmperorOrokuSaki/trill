@@ -4,3 +4,4 @@ mod render;
 mod state;
 mod tui;
 mod types;
+mod log;
