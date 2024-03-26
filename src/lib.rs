@@ -1,5 +1,4 @@
 mod app;
-mod error;
 mod provider;
 mod render;
 mod state;

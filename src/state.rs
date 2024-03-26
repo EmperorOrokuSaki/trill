@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread::sleep, time::Duration};
+use std::collections::HashMap;
 
 use alloy::{
     primitives::{TxHash, Uint, U256},
@@ -13,7 +13,6 @@ use alloy::{
 };
 use color_eyre::eyre;
 use opcode_parser::Operations;
-use tracing::{event, Level};
 
 use crate::provider;
 

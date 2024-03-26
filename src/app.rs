@@ -1,5 +1,3 @@
-use std::io;
-
 use crate::render::RenderData;
 use crate::state::AppState;
 use crate::tui::{self, Event};
@@ -8,7 +6,6 @@ use alloy::primitives::TxHash;
 use crossterm::event::KeyCode::Char;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::*;
-use tracing::{event, Level};
 
 #[derive(Debug)]
 pub struct App {
@@ -33,9 +30,7 @@ impl Default for App {
 impl App {
     /// runs the application's main loop until the user quits
     pub async fn run(&mut self, transaction: TxHash) -> color_eyre::Result<()> {
-        let mut tui = tui::Tui::new()?
-            .tick_rate(1.0) // 4 ticks per second
-            .frame_rate(4.0); // 30 frames per second
+        let mut tui = tui::Tui::new()?.frame_rate(4.0); // 30 frames per second
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
@@ -60,37 +55,18 @@ impl App {
                 self.pause,
             )
             .await?;
-            event!(
-                Level::INFO,
-                "FROM RUN 1 APP.RS: {}",
-                app_state.write_dataset.len()
-            );
 
             if let Some(evt) = tui.next().await {
                 match evt {
                     Event::Render => {
                         tui.draw(|f| {
-                            event!(
-                                Level::INFO,
-                                "FROM RUN APP.RS: {}",
-                                app_state.write_dataset.len()
-                            );
                             self.render_frame(f, &mut app_state);
                         })?;
                     }
                     Event::Key(key) => {
                         self.handle_event(key, &mut app_state);
                     }
-                    _ => {
-                        event!(
-                            Level::INFO,
-                            "PASS"
-                        );
-                        event!(
-                            Level::INFO,
-                            "{:?}", &evt
-                        );
-                    }
+                    _ => {}
                 }
             };
             if self.exit {
@@ -104,11 +80,6 @@ impl App {
     }
 
     fn render_frame(&self, frame: &mut Frame, mut state: &mut AppState) {
-        event!(
-            Level::INFO,
-            "FROM RENDER FRAME APP.RS: {}",
-            state.write_dataset.len()
-        );
         frame.render_stateful_widget(self, frame.size(), &mut state);
     }
 

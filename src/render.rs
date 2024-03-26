@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
@@ -12,8 +10,6 @@ use ratatui::{
         ScrollbarOrientation, ScrollbarState, StatefulWidget, Table, TableState, Widget,
     },
 };
-use tokio::time::sleep;
-use tracing::{event, Level};
 
 use crate::state::{AppState, SlotStatus};
 
@@ -153,8 +149,6 @@ impl<'a> RenderData<'a> {
             SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
             _ => Cell::new(op.operation.text()).yellow(),
         };
-
-        event!(Level::INFO, "FROM RENDER.RS: {}", self.state.write_dataset.len());
 
         vec.extend(vec![
             Row::new(vec![

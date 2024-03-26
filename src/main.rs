@@ -1,6 +1,5 @@
 mod app;
 mod cli;
-mod error;
 mod provider;
 mod render;
 mod state;
@@ -15,10 +14,8 @@ use cli::Cli;
 use color_eyre::Result;
 use std::path::PathBuf;
 
-use color_eyre::eyre::Context;
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
-use tracing::error;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
@@ -99,7 +96,6 @@ macro_rules! trace_dbg {
 }
 #[tokio::main]
 async fn main() -> Result<()> {
-    error::install_hooks()?;
     initialize_logging()?;
     let cli = Cli::parse();
     let transaction = TxHash::from_str(cli.transaction.as_str())?;
