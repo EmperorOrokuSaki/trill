@@ -2,32 +2,47 @@
 
 Trill is a TUI memory profiler for EVM chains with a focus on efficiency. It is written in Rust and envisioned to be an open-source tool used by programmers who are interested in observing how transactions modify a smart contract's dynamic storage.
 
+## Introduction
+
+Memory profiling is crucial for understanding and optimizing the performance of smart contracts on EVM chains. Trill provides developers with a powerful tool to visualize and analyze memory usage during transaction execution, helping them identify potential bottlenecks and improve contract efficiency.
+
 ## Installation
 
-Prior to installing the application please make sure that you have the following installed:
+Prior to installing Trill, ensure that you have the following dependencies installed:
 
-- [Rust](https://www.rust-lang.org/tools/install): Trill is written in the Rust programming language and the current version does not include an executable.
-- [Foundry](https://book.getfoundry.sh/getting-started/installation): The current version of Trill uses the Anvil local environment for simulating transaction trace calls.
+- [Rust](https://www.rust-lang.org/tools/install): Trill is written in Rust.
+- [Foundry](https://book.getfoundry.sh/getting-started/installation): Trill uses the Anvil local environment for simulating transaction trace calls.
 
+### Manual Installation
+
+```sh
+$ git clone https://github.com/EmperorOrokuSaki/trill.git
+$ cd trill
+$ cargo install --path .
+```
+
+## Usage
 ### Custom transactions
 
-You can use Trill with any transaction made in the local Anvil environment. However, during the initialization of Anvil it is required to include the `--steps-tracing` flag to make trace RPC calls possible:
+To use Trill with custom transactions in the local Anvil environment, follow these steps:
 
-`$ anvil --port 8545 --steps-tracing`
+1. Start Anvil with tracing enabled:
 
-After submission of the transaction, you can use the transaction hash to start Trill:
+```$ anvil --port 8545 --steps-tracing```
 
-`$ cargo run -- --transaction <TX_HASH>`
+2. Deploy your contract and submit your transaction.
 
-### Launch script
+3. Use the transaction hash to start Trill:
 
-The [launch.sh](./launch.sh) shell script is intended to be used as an example of how the Anvil environment can be set-up and Trill be used for profiling the memory propagation of a smart contract during a transaction. You can run this script by executing the commands below:
+```$ cargo run -- --transaction <TX_HASH>```
+
+### Launch Script
+The [launch.sh](./launch.sh) shell script demonstrates how to set up the Anvil environment and use Trill for profiling a smart contract's memory propagation during a transaction:
 
 `$ chmod +x launch.sh && ./launch.sh`
 
-## Supported opcodes
-
-All supported opcodes are listed below. If a certain opcode is missing, please open an issue about it.
+## Supported Opcodes
+Trill supports the following opcodes for memory profiling:
 
 - MSTORE
 - MSTORE8
@@ -38,3 +53,18 @@ All supported opcodes are listed below. If a certain opcode is missing, please o
 - CODECOPY
 - RETURNDATACOPY
 - MCOPY
+
+### Opcode Argument Parsing
+Trill uses the [opcode-parser](https://github.com/EmperorOrokuSaki/opcode-parser) crate to parse the arguments for the supported opcodes.
+
+## Troubleshooting
+If you encounter any issues during installation or usage, please open an issue on this repository.
+
+## Contributing
+This version of Trill can potentially (and most likely) have many bugs. All community contributions are welcome, even if they are simple documentation improvements.
+
+Additionally, if you are interested in contributing to the code of the project, please check [these](https://github.com/EmperorOrokuSaki/trill/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+label%3A%22help+wanted%22+) issues.
+
+## Contact
+For questions, feedback, or collaboration opportunities, please start a [discussion](https://github.com/EmperorOrokuSaki/trill/discussions) or [issue](https://github.com/EmperorOrokuSaki/trill/issues) on GitHub.
+
