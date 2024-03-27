@@ -29,7 +29,7 @@ impl Default for App {
 }
 impl App {
     /// runs the application's main loop until the user quits
-    pub async fn run(&mut self, transaction: TxHash, speed: f64) -> color_eyre::Result<()> {
+    pub async fn run(&mut self, transaction: TxHash, speed: f64, rpc: String) -> color_eyre::Result<()> {
         let mut tui = tui::Tui::new()?.frame_rate(speed);
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
@@ -53,6 +53,7 @@ impl App {
                 self.iteration,
                 self.forward,
                 self.pause,
+                &rpc
             )
             .await?;
 

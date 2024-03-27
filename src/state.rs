@@ -117,8 +117,8 @@ impl SlotStatus {
 }
 
 impl AppState {
-    async fn initialize(&mut self, transaction: TxHash) -> Result<(), eyre::Error> {
-        let provider = provider::HTTPProvider::new().await?;
+    async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
+        let provider = provider::HTTPProvider::new(rpc).await?;
         let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
@@ -472,9 +472,10 @@ impl AppState {
         iteration: u64,
         forward: bool,
         pause: bool,
+        rpc: &str
     ) -> Result<Self, eyre::Error> {
         if !self.initialized {
-            self.initialize(transaction).await?;
+            self.initialize(transaction, rpc).await?;
         }
         if pause {
             return Ok(self);

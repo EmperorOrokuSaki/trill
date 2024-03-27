@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let transaction = TxHash::from_str(cli.transaction.as_str())?;
     let speed = cli.speed;
-    App::default().run(transaction, speed).await?;
+    let rpc = cli.rpc;
+    App::default().run(transaction, speed, rpc).await?;
     Ok(())
 }

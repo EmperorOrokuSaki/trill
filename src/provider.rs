@@ -9,9 +9,9 @@ pub struct HTTPProvider {
 }
 
 impl HTTPProvider {
-    pub async fn new() -> Result<RootProvider<BoxTransport>, eyre::Error> {
+    pub async fn new(rpc: &str) -> Result<RootProvider<BoxTransport>, eyre::Error> {
         match ProviderBuilder::new()
-            .on_builtin("http://127.0.0.1:8545")
+            .on_builtin(rpc)
             .await
         {
             Ok(provider) => return Ok(provider),
