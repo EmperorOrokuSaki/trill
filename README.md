@@ -11,7 +11,7 @@ Memory profiling is crucial for understanding and optimizing the performance of 
 Prior to installing Trill, ensure that you have the following dependencies installed:
 
 - [Rust](https://www.rust-lang.org/tools/install): Trill is written in Rust.
-- [Foundry](https://book.getfoundry.sh/getting-started/installation): Trill uses the Anvil local environment for simulating transaction trace calls.
+- [Foundry](https://book.getfoundry.sh/getting-started/installation): Trill uses the Anvil local environment by default for simulating transaction trace calls. If you wish to use a RPC endpoint that supports `debug_traceTransaction` calls, you may not need this dependency.
 
 ### Manual Installation
 
@@ -23,6 +23,12 @@ $ cargo install --path .
 
 ## Usage
 ### Custom transactions
+
+You can use the following command. Please, make sure your RPC supports `debug_traceTransaction` calls:
+
+```$ cargo run -- --transaction <TX_HASH> --rpc <RPC_URL>```
+
+#### Anvil
 
 To use Trill with custom transactions in the local Anvil environment, follow these steps:
 
