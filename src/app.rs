@@ -17,8 +17,6 @@ pub struct App {
     pause: bool,
     /// main loop's exit code
     exit: bool,
-    /// scrolling the memory table. True for down, false for up.
-    scroll_table: Option<bool>,
 }
 
 impl Default for App {
@@ -28,7 +26,6 @@ impl Default for App {
             exit: false,
             forward: true, // go forward
             pause: false,
-            scroll_table: None,
         }
     }
 }
@@ -47,19 +44,10 @@ impl App {
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
+
+        // Main loop begins here
         loop {
-            if let Some(scroll_direction) = self.scroll_table {
-                if !scroll_direction && app_state.table_beginning_index > 0 {
-                    // Go up
-                    app_state.table_beginning_index -= 1;
-                } else if scroll_direction {
-                    // Go down
-                    app_state.table_beginning_index += 1;
-                }
-
-                self.scroll_table = None;
-            }
-
+            // Handle main table (memory slots) scrolling
             app_state = AppState::run(
                 app_state,
                 transaction,
@@ -111,12 +99,19 @@ impl App {
                 }
             }
             Char(' ') => self.pause = !self.pause,
-            Char('w') => self.scroll_table = Some(false),
-            Char('s') => self.scroll_table = Some(true),
+            Char('w') => {
+                if state.table_beginning_index > 0 {
+                    // Go up
+                    state.table_beginning_index -= 1;
+                }
+            },
+            Char('s') => state.table_beginning_index += 1,
             Char('h') => state.help = !state.help,
             _ => {}
         }
     }
+
+    // fn handle_table_scrolling
 }
 
 impl StatefulWidget for &App {
