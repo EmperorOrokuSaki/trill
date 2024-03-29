@@ -357,6 +357,5 @@ impl<'a> RenderData<'a> {
         if self.state.help {
             // display help box
         }
-
     }
 }

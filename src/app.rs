@@ -9,10 +9,15 @@ use ratatui::prelude::*;
 
 #[derive(Debug)]
 pub struct App {
+    /// Number of operations to process with each frame
     iteration: u64,
-    forward: bool, // false for going back one iteration, true for going forward in the processing
-    pause: bool,   // false for not pause and true for pause
+    /// false for going back one iteration, true for going forward in the processing
+    forward: bool,
+    /// false for not pause and true for pause
+    pause: bool,
+    /// main loop's exit code
     exit: bool,
+    /// scrolling the memory table. True for down, false for up.
     scroll_table: Option<bool>,
 }
 
@@ -27,10 +32,18 @@ impl Default for App {
         }
     }
 }
+
 impl App {
     /// runs the application's main loop until the user quits
-    pub async fn run(&mut self, transaction: TxHash, speed: f64, rpc: String) -> color_eyre::Result<()> {
-        let mut tui = tui::Tui::new()?.frame_rate(speed);
+    pub async fn run(
+        &mut self,
+        transaction: TxHash,
+        fps: f64,
+        iteration: u64,
+        rpc: String,
+    ) -> color_eyre::Result<()> {
+        let mut tui = tui::Tui::new()?.frame_rate(fps);
+        self.iteration = iteration;
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
         let mut app_state = AppState::default();
@@ -53,7 +66,7 @@ impl App {
                 self.iteration,
                 self.forward,
                 self.pause,
-                &rpc
+                &rpc,
             )
             .await?;
 

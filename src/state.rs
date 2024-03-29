@@ -75,7 +75,7 @@ impl Default for AppState {
             operation_to_render: OperationData::default(),
             read_dataset: vec![],
             write_dataset: vec![],
-            help: false
+            help: false,
         }
     }
 }
@@ -472,7 +472,7 @@ impl AppState {
         iteration: u64,
         forward: bool,
         pause: bool,
-        rpc: &str
+        rpc: &str,
     ) -> Result<Self, eyre::Error> {
         if !self.initialized {
             self.initialize(transaction, rpc).await?;
