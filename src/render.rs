@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Constraint, Direction, Layout, Margin, Rect},
@@ -44,42 +45,86 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
 
         let mut s = TableState::default();
-        let mut rows: Vec<Row> = vec![];
-        let mut row: Vec<Cell> = vec![];
-        let width: usize = (layout.width / 2) as usize;
-        let height: usize = (layout.height - 2) as usize;
-        let mut first_slot: usize = self.state.table_beginning_index as usize * width;
-        let mut range_ending = self.state.slots.len();
+        if self.state.display_memory_data {
+            let mut rows: Vec<Row> = vec![];
+            let height: usize = (layout.height - 2) as usize;
+            let mut first_slot: usize = self.state.table_beginning_index as usize;
 
-        while first_slot > self.state.slots.len() {
-            self.state.table_beginning_index -= 1;
-            first_slot = self.state.table_beginning_index as usize * width;
-        }
+            let operation_memory =
+                &self.state.raw_data[(self.state.next_operation - 1) as usize].memory;
 
-        if width * height < self.state.slots.len() - first_slot {
-            // need pagination
-            range_ending = width * height;
-        }
-
-        for slot in first_slot..range_ending {
-            match self.state.slots[slot] {
-                SlotStatus::EMPTY => row.push(Cell::new("■").style(Style::new().gray())),
-                SlotStatus::ACTIVE => row.push(Cell::new("■").style(Style::new().green())),
-                SlotStatus::READING => row.push(Cell::new("■").style(Style::new().blue())),
-                SlotStatus::WRITING => row.push(Cell::new("■").style(Style::new().red())),
-                SlotStatus::INIT => (),
+            if let Some(memory) = operation_memory {
+                if first_slot >= memory.len() {
+                    first_slot = memory.len() - 1;
+                }
+                let data = memory.into_iter().skip(first_slot).enumerate();
+                for (index, slot) in data {
+                    if index >= height {
+                        break;
+                    }
+                    let mut row: Vec<Cell> =
+                        vec![Cell::new((index + first_slot).to_string()).gray()];
+                    for chunk in &slot.chars().chunks(2) {
+                        let pair: String = chunk.collect();
+                        match self.state.slots[index + first_slot] {
+                            SlotStatus::EMPTY => row.push(Cell::new(pair).gray()),
+                            SlotStatus::ACTIVE => row.push(Cell::new(pair).green()),
+                            SlotStatus::READING => row.push(Cell::new(pair).blue()),
+                            SlotStatus::WRITING => row.push(Cell::new(pair).red()),
+                            SlotStatus::INIT => (),
+                        }
+                    }
+                    rows.push(Row::new(row));
+                }
             }
-            if slot % width == width - 1 || slot == self.state.slots.len() - 1 {
-                rows.push(Row::new(row.clone()));
-                row.clear();
+
+            let mut constraints = vec![Constraint::Percentage(4)];
+            constraints.extend(vec![Constraint::Percentage(3); 32]);
+
+            StatefulWidget::render(
+                Table::new(rows, constraints).block(block),
+                layout,
+                self.buf,
+                &mut s,
+            );
+        } else {
+            let mut rows: Vec<Row> = vec![];
+            let mut row: Vec<Cell> = vec![];
+            let width: usize = (layout.width / 2) as usize;
+            let height: usize = (layout.height - 2) as usize;
+            let mut first_slot: usize = self.state.table_beginning_index as usize * width;
+            let mut range_ending = self.state.slots.len();
+
+            while first_slot > self.state.slots.len() {
+                self.state.table_beginning_index -= 1;
+                first_slot = self.state.table_beginning_index as usize * width;
             }
+
+            if width * height < self.state.slots.len() - first_slot {
+                // need pagination
+                range_ending = width * height;
+            }
+
+            for slot in first_slot..range_ending {
+                match self.state.slots[slot] {
+                    SlotStatus::EMPTY => row.push(Cell::new("■").gray()),
+                    SlotStatus::ACTIVE => row.push(Cell::new("■").green()),
+                    SlotStatus::READING => row.push(Cell::new("■").blue()),
+                    SlotStatus::WRITING => row.push(Cell::new("■").red()),
+                    SlotStatus::INIT => (),
+                }
+                if slot % width == width - 1 || slot == self.state.slots.len() - 1 {
+                    rows.push(Row::new(row.clone()));
+                    row.clear();
+                }
+            }
+            StatefulWidget::render(
+                Table::new(rows, vec![Constraint::Length(1); width]).block(block),
+                layout,
+                self.buf,
+                &mut s,
+            );
         }
-        StatefulWidget::render(
-            Table::new(rows, vec![Constraint::Length(1); width]).block(block),
-            layout,
-            self.buf,
-            &mut s,
-        );
     }
 
     fn render_transaction_box(&mut self, layout: Rect) {

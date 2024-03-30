@@ -104,9 +104,10 @@ impl App {
                     // Go up
                     state.table_beginning_index -= 1;
                 }
-            },
+            }
             Char('s') => state.table_beginning_index += 1,
             Char('h') => state.help = !state.help,
+            Char('f') => state.display_memory_data = !state.display_memory_data,
             _ => {}
         }
     }

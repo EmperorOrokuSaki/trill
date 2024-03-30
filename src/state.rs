@@ -34,6 +34,7 @@ pub struct AppState {
     pub read_dataset: Vec<(f64, f64)>,
     pub write_dataset: Vec<(f64, f64)>,
     pub help: bool,
+    pub display_memory_data: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +77,7 @@ impl Default for AppState {
             read_dataset: vec![],
             write_dataset: vec![],
             help: false,
+            display_memory_data: false,
         }
     }
 }
