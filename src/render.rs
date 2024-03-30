@@ -45,9 +45,11 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
 
         let mut s = TableState::default();
+        let mut constraints: Vec<Constraint> = vec![];
+        let mut rows: Vec<Row> = vec![];
+        let height: usize = (layout.height - 2) as usize;
+
         if self.state.display_memory_data {
-            let mut rows: Vec<Row> = vec![];
-            let height: usize = (layout.height - 2) as usize;
             let mut first_slot: usize = self.state.table_beginning_index as usize;
 
             let operation_memory =
@@ -78,20 +80,11 @@ impl<'a> RenderData<'a> {
                 }
             }
 
-            let mut constraints = vec![Constraint::Percentage(4)];
+            constraints = vec![Constraint::Percentage(4)];
             constraints.extend(vec![Constraint::Percentage(3); 32]);
-
-            StatefulWidget::render(
-                Table::new(rows, constraints).block(block),
-                layout,
-                self.buf,
-                &mut s,
-            );
         } else {
-            let mut rows: Vec<Row> = vec![];
             let mut row: Vec<Cell> = vec![];
             let width: usize = (layout.width / 2) as usize;
-            let height: usize = (layout.height - 2) as usize;
             let mut first_slot: usize = self.state.table_beginning_index as usize * width;
             let mut range_ending = self.state.slots.len();
 
@@ -101,7 +94,6 @@ impl<'a> RenderData<'a> {
             }
 
             if width * height < self.state.slots.len() - first_slot {
-                // need pagination
                 range_ending = width * height;
             }
 
@@ -118,13 +110,14 @@ impl<'a> RenderData<'a> {
                     row.clear();
                 }
             }
-            StatefulWidget::render(
-                Table::new(rows, vec![Constraint::Length(1); width]).block(block),
-                layout,
-                self.buf,
-                &mut s,
-            );
+            constraints = vec![Constraint::Length(1); width];
         }
+        StatefulWidget::render(
+            Table::new(rows, constraints).block(block),
+            layout,
+            self.buf,
+            &mut s,
+        );
     }
 
     fn render_transaction_box(&mut self, layout: Rect) {
