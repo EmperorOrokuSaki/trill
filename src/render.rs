@@ -22,7 +22,6 @@ pub struct RenderData<'a> {
 
 impl<'a> RenderData<'a> {
     fn render_memory(&mut self, layout: Rect) {
-        // dbg!(&layout.width);
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
             " Up ".into(),
@@ -251,7 +250,7 @@ impl<'a> RenderData<'a> {
             .map(|op| match SlotStatus::from_opcode(op) {
                 SlotStatus::READING => Line::from(op.text()).style(Style::new().blue()),
                 SlotStatus::WRITING => Line::from(op.text()).style(Style::new().red()),
-                _ => Line::default(),
+                _ => Line::from(op.text()).style(Style::new().yellow()),
             })
             .collect();
 
@@ -263,8 +262,17 @@ impl<'a> RenderData<'a> {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("↑"))
             .end_symbol(Some("↓"));
+
+        let height = layout.height - 2;
+        if items.len() > self.state.history_vertical_scroll as usize
+            && items.len() >= height as usize
+        {
+            self.state.history_vertical_scroll += 1;
+        }
+
         let mut scrollbar_state =
             ScrollbarState::new(items.len()).position(self.state.history_vertical_scroll as usize);
+
         Widget::render(items_collection, layout, self.buf);
         StatefulWidget::render(
             scrollbar,

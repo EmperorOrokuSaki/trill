@@ -18,11 +18,17 @@ use crate::provider;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
+    /// Vector of slots with values of SlotStatus
     pub slots: Vec<SlotStatus>,
+    /// Slots that are not new and need to change their status in the next run
     pub slot_indexes_to_change_status: Vec<i64>,
+    /// Number of indexed slots
     pub indexed_slots_count: u64,
+    /// Next operation number to process
     pub next_operation: u64,
+    /// Next slots status
     pub next_slot_status: SlotStatus,
+    /// History of opcodes
     pub operation_codes: Vec<Operations>,
     pub raw_data: Vec<StructLog>,
     pub initialized: bool,
@@ -301,13 +307,6 @@ impl AppState {
                 }
 
                 self.slot_indexes_to_change_status = vec![];
-
-                // push opcode to history
-                if operation_number != 0 {
-                    self.operation_codes.push(Operations::from_text(
-                        self.raw_data[(operation_number - 1) as usize].op.as_str(),
-                    ));
-                }
             } else {
                 let last_write = match self.write_dataset.last() {
                     Some(&value) => (operation_number as f64, value.1),
@@ -330,6 +329,13 @@ impl AppState {
 
                 self.write_dataset.push(last_write);
                 self.read_dataset.push(last_read);
+            }
+
+            // push opcode to history
+            if operation_number != 0 {
+                self.operation_codes.push(Operations::from_text(
+                    self.raw_data[(operation_number - 1) as usize].op.as_str(),
+                ));
             }
 
             match Operations::from_text(operation.op.as_str()) {
