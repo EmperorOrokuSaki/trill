@@ -101,7 +101,7 @@ impl App {
                     'h' => state.help = !state.help,
                     'f' => state.display_memory_data = !state.display_memory_data,
                     _ => {}
-                }        
+                }
             }
             crossterm::event::KeyCode::Left => self.forward = false,
             crossterm::event::KeyCode::Right => self.forward = true,

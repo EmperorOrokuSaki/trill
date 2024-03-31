@@ -85,7 +85,7 @@ impl Default for AppState {
             write_dataset: vec![],
             help: false,
             display_memory_data: false,
-            pause: false
+            pause: false,
         }
     }
 }
