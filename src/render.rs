@@ -24,6 +24,8 @@ impl<'a> RenderData<'a> {
     fn render_memory(&mut self, layout: Rect) {
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
+            " Raw ".into(),
+            "<F>".blue().bold(),
             " Up ".into(),
             "<W>".green().bold(),
             " Pause ".into(),
