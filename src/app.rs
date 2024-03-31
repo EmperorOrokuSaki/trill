@@ -87,7 +87,22 @@ impl App {
 
     fn handle_event(&mut self, key: KeyEvent, state: &mut AppState) {
         match key.code {
-            Char('q') => self.exit = true,
+            Char(c) => {
+                match c.to_ascii_lowercase() {
+                    'q' => self.exit = true,
+                    ' ' => self.pause = !self.pause,
+                    'w' => {
+                        if state.table_beginning_index > 0 {
+                            // Go up
+                            state.table_beginning_index -= 1;
+                        }
+                    }
+                    's' => state.table_beginning_index += 1,
+                    'h' => state.help = !state.help,
+                    'f' => state.display_memory_data = !state.display_memory_data,
+                    _ => {}
+                }        
+            }
             crossterm::event::KeyCode::Left => self.forward = false,
             crossterm::event::KeyCode::Right => self.forward = true,
             crossterm::event::KeyCode::Down => {
@@ -98,16 +113,6 @@ impl App {
                     state.history_vertical_scroll -= 1;
                 }
             }
-            Char(' ') => self.pause = !self.pause,
-            Char('w') => {
-                if state.table_beginning_index > 0 {
-                    // Go up
-                    state.table_beginning_index -= 1;
-                }
-            }
-            Char('s') => state.table_beginning_index += 1,
-            Char('h') => state.help = !state.help,
-            Char('f') => state.display_memory_data = !state.display_memory_data,
             _ => {}
         }
     }

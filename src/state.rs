@@ -41,6 +41,7 @@ pub struct AppState {
     pub write_dataset: Vec<(f64, f64)>,
     pub help: bool,
     pub display_memory_data: bool,
+    pub pause: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +85,7 @@ impl Default for AppState {
             write_dataset: vec![],
             help: false,
             display_memory_data: false,
+            pause: false
         }
     }
 }
@@ -485,6 +487,7 @@ impl AppState {
         if !self.initialized {
             self.initialize(transaction, rpc).await?;
         }
+        self.pause = pause;
         if pause {
             return Ok(self);
         }

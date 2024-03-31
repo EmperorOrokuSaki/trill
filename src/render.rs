@@ -265,7 +265,7 @@ impl<'a> RenderData<'a> {
 
         let height = layout.height - 2;
         if items.len() > self.state.history_vertical_scroll as usize
-            && items.len() >= height as usize
+            && items.len() >= height as usize && !self.state.pause
         {
             self.state.history_vertical_scroll += 1;
         }
