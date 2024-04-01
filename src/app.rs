@@ -2,7 +2,7 @@ use crate::render::RenderData;
 use crate::state::AppState;
 use crate::tui::{self, Event};
 
-use alloy::primitives::TxHash;
+use color_eyre::eyre;
 use crossterm::event::KeyCode::Char;
 use crossterm::event::KeyEvent;
 use ratatui::prelude::*;
@@ -34,27 +34,21 @@ impl App {
     /// runs the application's main loop until the user quits
     pub async fn run(
         &mut self,
-        transaction: TxHash,
+        app_state: &mut AppState,
         fps: f64,
         iteration: u64,
-        rpc: String,
-    ) -> color_eyre::Result<()> {
+    ) -> color_eyre::Result<(), eyre::Error> {
         let mut tui = tui::Tui::new()?.frame_rate(fps);
         self.iteration = iteration;
 
         tui.enter()?; // Starts event handler, enters raw mode, enters alternate screen
-        let mut app_state = AppState::default();
 
         // Main loop begins here
         loop {
-            // Handle main table (memory slots) scrolling
-            app_state = AppState::run(
-                app_state,
-                transaction,
+            app_state.run(
                 self.iteration,
                 self.forward,
                 self.pause,
-                &rpc,
             )
             .await?;
 
@@ -62,11 +56,11 @@ impl App {
                 match evt {
                     Event::Render => {
                         tui.draw(|f| {
-                            self.render_frame(f, &mut app_state);
+                            self.render_frame(f, app_state);
                         })?;
                     }
                     Event::Key(key) => {
-                        self.handle_event(key, &mut app_state);
+                        self.handle_event(key, app_state);
                     }
                     _ => {}
                 }
@@ -117,7 +111,6 @@ impl App {
         }
     }
 
-    // fn handle_table_scrolling
 }
 
 impl StatefulWidget for &App {

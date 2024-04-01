@@ -16,7 +16,7 @@ use opcode_parser::Operations;
 
 use crate::provider;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AppState {
     /// Vector of slots with values of SlotStatus
     pub slots: Vec<SlotStatus>,
@@ -65,31 +65,6 @@ impl Default for OperationData {
     }
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        Self {
-            slots: vec![],
-            indexed_slots_count: 0,
-            next_operation: 0,
-            next_slot_status: SlotStatus::INIT,
-            raw_data: vec![],
-            initialized: false,
-            operation_codes: vec![],
-            transaction: Transaction::default(),
-            transaction_sucess: false,
-            slot_indexes_to_change_status: vec![],
-            history_vertical_scroll: 0,
-            table_beginning_index: 0,
-            operation_to_render: OperationData::default(),
-            read_dataset: vec![],
-            write_dataset: vec![],
-            help: false,
-            display_memory_data: false,
-            pause: false,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SlotStatus {
     INIT,
@@ -97,6 +72,12 @@ pub enum SlotStatus {
     ACTIVE,
     READING,
     WRITING,
+}
+
+impl Default for SlotStatus {
+    fn default() -> Self {
+        Self::INIT
+    }
 }
 
 impl SlotStatus {
@@ -127,7 +108,7 @@ impl SlotStatus {
 }
 
 impl AppState {
-    async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
+    pub async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new(rpc).await?;
         let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
@@ -151,8 +132,6 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                std::fs::write("result3.json", context.to_string())
-                    .expect("Failed to write to file");
                 self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
@@ -171,7 +150,7 @@ impl AppState {
         Ok(())
     }
 
-    fn go_back(mut self, iteration: u64) -> Result<Self, eyre::Error> {
+    fn go_back(&mut self, iteration: u64) -> Result<&mut Self, eyre::Error> {
         // go back one iteration
         // determin the operation to index
         // determin the slot status by checking the previous operation that interacted with the memory
@@ -220,7 +199,7 @@ impl AppState {
         }
     }
 
-    fn go_forward(mut self, iteration: u64) -> Result<Self, eyre::Error> {
+    fn go_forward(&mut self, iteration: u64) -> Result<&mut Self, eyre::Error> {
         let range_ending = self.raw_data.len() as u64;
 
         for slot in &mut self.slots {
@@ -477,16 +456,11 @@ impl AppState {
     }
 
     pub async fn run(
-        mut self,
-        transaction: TxHash,
+        &mut self,
         iteration: u64,
         forward: bool,
         pause: bool,
-        rpc: &str,
-    ) -> Result<Self, eyre::Error> {
-        if !self.initialized {
-            self.initialize(transaction, rpc).await?;
-        }
+    ) -> Result<&mut Self, eyre::Error> {
         self.pause = pause;
         if pause {
             return Ok(self);
