@@ -37,11 +37,7 @@ impl<'a> RenderData<'a> {
         ]));
         let block = Block::default()
             .title(title.alignment(Alignment::Center))
-            .title(
-                instructions
-                    .alignment(Alignment::Center)
-                    .position(Position::Bottom),
-            )
+            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
             .borders(Borders::TOP)
             .border_set(border::THICK);
 
@@ -157,20 +153,15 @@ impl<'a> RenderData<'a> {
                 Cell::new("Block Number").style(Style::new().gray().bold()),
                 Cell::new(transaction.block_number.unwrap().to_string()).style(Style::new().gray()),
             ]),
-            Row::new(vec![
-                Cell::new("Success").style(Style::new().gray().bold()),
-                success,
-            ]),
+            Row::new(vec![Cell::new("Success").style(Style::new().gray().bold()), success]),
             Row::new(vec![
                 Cell::new("Gas used").style(Style::new().gray().bold()),
                 Cell::new(transaction.gas.to_string()).style(Style::new().gray()),
             ]),
         ];
-        let tx_info_table = Table::new(
-            tx_info_rows,
-            [Constraint::Percentage(20), Constraint::Fill(1)],
-        )
-        .block(tx_info_block);
+        let tx_info_table =
+            Table::new(tx_info_rows, [Constraint::Percentage(20), Constraint::Fill(1)])
+                .block(tx_info_block);
         let mut s = TableState::default();
 
         StatefulWidget::render(tx_info_table, layout, self.buf, &mut s);
@@ -192,10 +183,7 @@ impl<'a> RenderData<'a> {
         };
 
         vec.extend(vec![
-            Row::new(vec![
-                Cell::new("Code").style(Style::new().gray()),
-                operation_code,
-            ]),
+            Row::new(vec![Cell::new("Code").style(Style::new().gray()), operation_code]),
             Row::new(vec![
                 Cell::new("Gas cost").style(Style::new().gray()),
                 Cell::new(op.gas_cost.to_string()).style(Style::new().gray()),
@@ -218,11 +206,9 @@ impl<'a> RenderData<'a> {
         }
 
         let op_info_rows = vec;
-        let op_info_table = Table::new(
-            op_info_rows,
-            [Constraint::Percentage(20), Constraint::Fill(1)],
-        )
-        .block(op_info_block);
+        let op_info_table =
+            Table::new(op_info_rows, [Constraint::Percentage(20), Constraint::Fill(1)])
+                .block(op_info_block);
         let mut s = TableState::default();
 
         StatefulWidget::render(op_info_table, layout, self.buf, &mut s);
@@ -239,11 +225,7 @@ impl<'a> RenderData<'a> {
 
         let history_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
-            .title(
-                instructions
-                    .alignment(Alignment::Center)
-                    .position(Position::Bottom),
-            )
+            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
@@ -333,10 +315,7 @@ impl<'a> RenderData<'a> {
         let x_axis = Axis::default()
             .style(Style::default().white())
             .bounds([0.0, self.state.write_dataset.len() as f64])
-            .labels(vec![
-                "0".into(),
-                self.state.write_dataset.len().to_string().into(),
-            ]);
+            .labels(vec!["0".into(), self.state.write_dataset.len().to_string().into()]);
 
         // Create the Y axis and define its properties
         let write_y_axis = Axis::default()
@@ -344,10 +323,7 @@ impl<'a> RenderData<'a> {
             .bounds([0.0, self.state.write_dataset.last().unwrap().1 as f64])
             .labels(vec![
                 "0".into(),
-                (self.state.write_dataset.last().unwrap().1)
-                    .ceil()
-                    .to_string()
-                    .into(),
+                (self.state.write_dataset.last().unwrap().1).ceil().to_string().into(),
             ]);
 
         let read_y_axis = Axis::default()
@@ -355,10 +331,7 @@ impl<'a> RenderData<'a> {
             .bounds([0.0, self.state.read_dataset.last().unwrap().1 as f64])
             .labels(vec![
                 "0".into(),
-                (self.state.read_dataset.last().unwrap().1)
-                    .ceil()
-                    .to_string()
-                    .into(),
+                (self.state.read_dataset.last().unwrap().1).ceil().to_string().into(),
             ]);
 
         // Create the chart and link all the parts together

@@ -1,10 +1,11 @@
-use crate::render::RenderData;
-use crate::state::AppState;
-use crate::tui::{self, Event};
+use crate::{
+    render::RenderData,
+    state::AppState,
+    tui::{self, Event},
+};
 
 use color_eyre::eyre;
-use crossterm::event::KeyCode::Char;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode::Char, KeyEvent};
 use ratatui::prelude::*;
 
 #[derive(Debug)]
@@ -45,9 +46,7 @@ impl App {
 
         // Main loop begins here
         loop {
-            app_state
-                .run(self.iteration, self.forward, self.pause)
-                .await?;
+            app_state.run(self.iteration, self.forward, self.pause).await?;
 
             if let Some(evt) = tui.next().await {
                 match evt {

@@ -38,7 +38,8 @@ pub struct AppState {
     pub transaction_success: bool,
     /// Position of the scroller in the history box
     pub history_vertical_scroll: u16,
-    /// The slot number to display at the top for raw mode and the line to display at the top for normal mode
+    /// The slot number to display at the top for raw mode and the line to display at the top for
+    /// normal mode
     pub table_beginning_index: u64,
     /// Operation data to render in the operation info box
     pub operation_to_render: OperationData,
@@ -162,18 +163,17 @@ impl AppState {
     fn go_back(&mut self, iteration: u64) -> Result<&mut Self, eyre::Error> {
         // go back one iteration
         // determin the operation to index
-        // determin the slot status by checking the previous operation that interacted with the memory
+        // determin the slot status by checking the previous operation that interacted with the
+        // memory
         let to_index = self.next_operation - iteration;
         let last_memory_affecting_op_index = self.raw_data[..to_index as usize]
             .iter()
             .rev()
             .enumerate()
-            .find_map(
-                |(index, operation)| match Operations::from_text(operation.op.as_str()) {
-                    Operations::OTHER(_) => None,
-                    _ => Some(index),
-                },
-            )
+            .find_map(|(index, operation)| match Operations::from_text(operation.op.as_str()) {
+                Operations::OTHER(_) => None,
+                _ => Some(index),
+            })
             .map(|index| to_index as usize - index - 1);
 
         if last_memory_affecting_op_index.is_none() {
@@ -223,8 +223,8 @@ impl AppState {
             if self.next_slot_status != SlotStatus::EMPTY
                 && self.next_slot_status != SlotStatus::INIT
             {
-                // Condition to check if the memory is affected in this operation as a result of the previous operation
-                // Memory is affected
+                // Condition to check if the memory is affected in this operation as a result of the
+                // previous operation Memory is affected
                 let memory = operation.memory.as_ref().unwrap();
                 let mut new_slots = 0;
 
@@ -244,8 +244,7 @@ impl AppState {
                         let new_number = self.read_dataset.last().unwrap_or(&(0.0, 0.0)).1
                             + new_slots as f64
                             + self.slot_indexes_to_change_status.len() as f64;
-                        self.read_dataset
-                            .push((operation_number as f64, new_number));
+                        self.read_dataset.push((operation_number as f64, new_number));
 
                         if new_slots > 0 {
                             self.write_dataset.push((
@@ -258,7 +257,8 @@ impl AppState {
                                 Some(&value) => (operation_number as f64, value.1),
                                 None => {
                                     // Handle the case when the vector is empty
-                                    // For example, you might want to return an error or use a default value.
+                                    // For example, you might want to return an error or use a
+                                    // default value.
                                     // Here, we'll just use a default value of 0.
                                     (operation_number as f64, 0.0)
                                 }
@@ -270,14 +270,14 @@ impl AppState {
                         let new_number = self.write_dataset.last().unwrap_or(&(0.0, 0.0)).1
                             + new_slots as f64
                             + self.slot_indexes_to_change_status.len() as f64;
-                        self.write_dataset
-                            .push((operation_number as f64, new_number));
+                        self.write_dataset.push((operation_number as f64, new_number));
                         let last_read = match self.read_dataset.last() {
                             Some(&value) => (operation_number as f64, value.1),
                             None => {
                                 // Handle the case when the vector is empty
-                                // For example, you might want to return an error or use a default value.
-                                // Here, we'll just use a default value of 0.
+                                // For example, you might want to return an error or use a default
+                                // value. Here, we'll just use a
+                                // default value of 0.
                                 (operation_number as f64, 0.0)
                             }
                         };
@@ -433,7 +433,8 @@ impl AppState {
             }
             Operations::MSTORE8 => {
                 // Writes one byte value
-                // TODO: Check what happens if the offset is at the end of a slot and the value needs more space, does it overflow to the next slot?
+                // TODO: Check what happens if the offset is at the end of a slot and the value
+                // needs more space, does it overflow to the next slot?
                 let unwrapped_stack: &Vec<Uint<256, 4>> = stack.as_ref().unwrap();
                 let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 self.slot_indexes_to_change_status = vec![memory_offset.saturating_to::<i64>()];

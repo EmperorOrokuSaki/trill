@@ -2,7 +2,7 @@
 # This script runs `cargo fmt` before every commit.
 
 # Run cargo fmt
-cargo fmt
+cargo +nightly fmt
 
 # Capture the exit status of cargo fmt
 FMT_STATUS=$?

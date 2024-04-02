@@ -9,9 +9,7 @@ use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, La
 lazy_static! {
     pub static ref PROJECT_NAME: String = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
     pub static ref DATA_FOLDER: Option<PathBuf> =
-        std::env::var(format!("{}_DATA", PROJECT_NAME.clone()))
-            .ok()
-            .map(PathBuf::from);
+        std::env::var(format!("{}_DATA", PROJECT_NAME.clone())).ok().map(PathBuf::from);
     pub static ref LOG_ENV: String = format!("{}_LOGLEVEL", PROJECT_NAME.clone());
     pub static ref LOG_FILE: String = String::from("a.log");
 }
@@ -49,10 +47,7 @@ pub fn initialize_logging() -> Result<()> {
         .with_target(false)
         .with_ansi(false)
         .with_filter(tracing_subscriber::filter::EnvFilter::from_default_env());
-    tracing_subscriber::registry()
-        .with(file_subscriber)
-        .with(ErrorLayer::default())
-        .init();
+    tracing_subscriber::registry().with(file_subscriber).with(ErrorLayer::default()).init();
     Ok(())
 }
 
