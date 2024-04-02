@@ -33,7 +33,7 @@ pub struct AppState {
     pub raw_data: Vec<StructLog>,
     pub initialized: bool,
     pub transaction: Transaction,
-    pub transaction_sucess: bool,
+    pub transaction_success: bool,
     pub history_vertical_scroll: u16,
     pub table_beginning_index: u64,
     pub operation_to_render: OperationData,
@@ -132,7 +132,7 @@ impl AppState {
 
         match result {
             GethTrace::JS(context) => {
-                self.transaction_sucess = !serde_json::from_value(context["failed"].clone())?;
+                self.transaction_success = !serde_json::from_value(context["failed"].clone())?;
                 self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
                 let max_memory_length = self
                     .raw_data

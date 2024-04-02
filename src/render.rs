@@ -128,11 +128,11 @@ impl<'a> RenderData<'a> {
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::THICK);
-        let success = match self.state.transaction_sucess {
+        let success = match self.state.transaction_success {
             true => {
-                Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().green())
+                Cell::new(self.state.transaction_success.to_string()).style(Style::new().green())
             }
-            false => Cell::new(self.state.transaction_sucess.to_string()).style(Style::new().red()),
+            false => Cell::new(self.state.transaction_success.to_string()).style(Style::new().red()),
         };
         let tx_info_rows = vec![
             Row::new(vec![
