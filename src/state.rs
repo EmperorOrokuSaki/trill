@@ -30,17 +30,27 @@ pub struct AppState {
     pub next_slot_status: SlotStatus,
     /// History of opcodes
     pub operation_codes: Vec<Operations>,
+    /// Raw returned data by the trace transaction call
     pub raw_data: Vec<StructLog>,
-    pub initialized: bool,
+    /// Transaction details
     pub transaction: Transaction,
+    /// Success of the transaction
     pub transaction_success: bool,
+    /// Position of the scroller in the history box
     pub history_vertical_scroll: u16,
+    /// The slot number to display at the top for raw mode and the line to display at the top for normal mode
     pub table_beginning_index: u64,
+    /// Operation data to render in the operation info box
     pub operation_to_render: OperationData,
+    /// The read operations chart dataset
     pub read_dataset: Vec<(f64, f64)>,
+    /// The write operations chart dataset
     pub write_dataset: Vec<(f64, f64)>,
+    /// Display help box
     pub help: bool,
+    /// Display raw memory data
     pub display_memory_data: bool,
+    /// Pause the process
     pub pause: bool,
 }
 
@@ -145,7 +155,6 @@ impl AppState {
             }
             _ => (),
         }
-        self.initialized = true;
 
         Ok(())
     }
