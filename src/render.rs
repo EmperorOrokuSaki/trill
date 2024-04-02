@@ -132,7 +132,9 @@ impl<'a> RenderData<'a> {
             true => {
                 Cell::new(self.state.transaction_success.to_string()).style(Style::new().green())
             }
-            false => Cell::new(self.state.transaction_success.to_string()).style(Style::new().red()),
+            false => {
+                Cell::new(self.state.transaction_success.to_string()).style(Style::new().red())
+            }
         };
         let tx_info_rows = vec![
             Row::new(vec![
@@ -266,7 +268,7 @@ impl<'a> RenderData<'a> {
             .end_symbol(Some("↓"));
 
         let height = layout.height - 2;
-        if items.len() > self.state.history_vertical_scroll as usize
+        if items.len() > (self.state.history_vertical_scroll + height - 1) as usize
             && items.len() >= height as usize
             && !self.state.pause
         {

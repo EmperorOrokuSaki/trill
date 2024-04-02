@@ -45,12 +45,9 @@ impl App {
 
         // Main loop begins here
         loop {
-            app_state.run(
-                self.iteration,
-                self.forward,
-                self.pause,
-            )
-            .await?;
+            app_state
+                .run(self.iteration, self.forward, self.pause)
+                .await?;
 
             if let Some(evt) = tui.next().await {
                 match evt {
@@ -110,7 +107,6 @@ impl App {
             _ => {}
         }
     }
-
 }
 
 impl StatefulWidget for &App {
