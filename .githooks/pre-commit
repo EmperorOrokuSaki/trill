@@ -1,0 +1,16 @@
+#!/bin/sh
+# This script runs `cargo fmt` before every commit.
+
+# Run cargo fmt
+cargo fmt
+
+# Capture the exit status of cargo fmt
+FMT_STATUS=$?
+
+if [ $FMT_STATUS -ne 0 ]; then
+    echo "Failed to format the code. Please fix any issues and try again."
+    exit 1
+fi
+
+exit 0
+
