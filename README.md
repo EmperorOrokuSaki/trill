@@ -53,6 +53,9 @@ The [launch.sh](./launch.sh) shell script demonstrates how to set up the Anvil e
 
 `$ chmod +x launch.sh && ./launch.sh`
 
+### Test Scripts
+The [scripts](./scripts) directory contains several shell scripts that deploy and interact with different well-known smart contracts.
+
 ## Supported Opcodes
 Trill supports the following opcodes for memory profiling:
 
