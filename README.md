@@ -9,7 +9,8 @@ Trill is a TUI memory profiler for EVM chains with a focus on efficiency. It is 
 Memory profiling is crucial for understanding and optimizing the performance of smart contracts on EVM chains. Trill provides developers with a powerful tool to visualize and analyze memory usage during transaction execution, helping them identify potential bottlenecks and improve contract efficiency.
 
 > [!NOTE]
-> Trill is currently undergoing tests and could potentially have issues. In case you find any problem during building or running it, please open an issue.
+> Trill was inspired by this [tweet](https://twitter.com/0xkarmacoma/status/1773385937323786662) from [karma](https://twitter.com/0xkarmacoma)!
+> This project is currently undergoing tests and could potentially have issues. In case you find any problem during building or running it, please open an issue.
 
 ## Installation
 
