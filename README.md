@@ -31,6 +31,21 @@ $ cargo install --path .
 ```
 
 ## Usage
+### Commands
+```
+A TUI memory profiler tool for EVM smart contracts
+
+Usage: trill [OPTIONS] --transaction <TRANSACTION>
+
+Options:
+  -t, --transaction <TRANSACTION>  Transaction hash
+  -f, --fps <FPS>                  Frames per second [default: 4]
+  -i, --iteration <ITERATION>      Operations to process with each frame [default: 1]
+  -r, --rpc <RPC>                  The JSON-RPC endpoint URL [default: http://127.0.0.1:8545]
+  -h, --help                       Print help
+  -V, --version                    Print version
+```
+
 ### Custom transactions
 
 You can use the following command. Please, make sure your RPC supports `debug_traceTransaction` calls:
