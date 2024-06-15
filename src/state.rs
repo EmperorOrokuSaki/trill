@@ -100,7 +100,7 @@ impl SlotStatus {
             SlotStatus::ACTIVE => "Active",
             SlotStatus::READING => "Reading",
             SlotStatus::WRITING => "Writing",
-            SlotStatus::UNREAD => "Unread"
+            SlotStatus::UNREAD => "Unread",
         }
     }
 
