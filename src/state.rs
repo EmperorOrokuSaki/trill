@@ -16,8 +16,32 @@ use opcode_parser::Operations;
 
 use crate::provider;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct AppState {
+    /// App mode
+    pub mode: AppMode,
+    /// States for the transactions
+    pub transaction_states: Vec<TransactionState>
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            mode: AppMode::NORMAL,
+            transaction_states: vec![TransactionState::default()]
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AppMode {
+    VERSUS,
+    NORMAL
+}
+
+
+#[derive(Debug, Clone, Default)]
+pub struct TransactionState {
     /// Vector of slots with values of SlotStatus
     pub slots: Vec<SlotStatus>,
     /// Slots that are not new and need to change their status in the next run
@@ -120,8 +144,12 @@ impl SlotStatus {
     }
 }
 
-impl AppState {
-    pub async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
+impl TransactionState {
+    pub async fn initialize(
+        &mut self,
+        transaction: TxHash,
+        rpc: &str,
+    ) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new(rpc).await?;
         let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
