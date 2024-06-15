@@ -16,21 +16,27 @@ use opcode_parser::Operations;
 
 use crate::provider;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AppState {
     /// App mode
     pub mode: AppMode,
     /// States for the transactions
     pub transaction_states: Vec<TransactionState>,
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        Self { mode: AppMode::NORMAL, transaction_states: vec![TransactionState::default()] }
-    }
+    /// The slot number to display at the top for raw mode and the line to display at the top for
+    /// normal mode
+    pub table_beginning_index: u64,
+    /// Display raw memory data
+    pub display_memory_data: bool,
+    /// Display help box
+    pub help: bool,
+    /// Pause the process
+    pub pause: bool,
+    /// Position of the scroller in the history box
+    pub history_vertical_scroll: u16,
 }
 
 impl AppState {
+    /// Initializes the state of its transactions and sets the mode of the app
     pub async fn init(
         &mut self,
         rpc: &str,
@@ -53,12 +59,38 @@ impl AppState {
 
         Ok(self)
     }
+
+    /// Runs the next step of each transaction's state
+    pub async fn run(
+        &mut self,
+        iteration: u64,
+        forward: bool,
+        pause: bool,
+    ) -> Result<&mut Self, eyre::Error> {
+        self.pause = pause;
+        
+        if pause {
+            return Ok(self);
+        }
+
+        for mut state in self.transaction_states.clone() {
+            state.run(iteration, forward).await.unwrap();
+        }
+
+        Ok(self)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum AppMode {
     VERSUS,
     NORMAL,
+}
+
+impl Default for AppMode {
+    fn default() -> Self {
+        Self::NORMAL
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -81,23 +113,12 @@ pub struct TransactionState {
     pub transaction: Transaction,
     /// Success of the transaction
     pub transaction_success: bool,
-    /// Position of the scroller in the history box
-    pub history_vertical_scroll: u16,
-    /// The slot number to display at the top for raw mode and the line to display at the top for
-    /// normal mode
-    pub table_beginning_index: u64,
     /// Operation data to render in the operation info box
     pub operation_to_render: OperationData,
     /// The read operations chart dataset
     pub read_dataset: Vec<(f64, f64)>,
     /// The write operations chart dataset
     pub write_dataset: Vec<(f64, f64)>,
-    /// Display help box
-    pub help: bool,
-    /// Display raw memory data
-    pub display_memory_data: bool,
-    /// Pause the process
-    pub pause: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -515,16 +536,7 @@ impl TransactionState {
         };
     }
 
-    pub async fn run(
-        &mut self,
-        iteration: u64,
-        forward: bool,
-        pause: bool,
-    ) -> Result<&mut Self, eyre::Error> {
-        self.pause = pause;
-        if pause {
-            return Ok(self);
-        }
+    pub async fn run(&mut self, iteration: u64, forward: bool) -> Result<&mut Self, eyre::Error> {
         if !forward {
             return self.go_back(iteration);
         }
