@@ -21,24 +21,45 @@ pub struct AppState {
     /// App mode
     pub mode: AppMode,
     /// States for the transactions
-    pub transaction_states: Vec<TransactionState>
+    pub transaction_states: Vec<TransactionState>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
-        Self {
-            mode: AppMode::NORMAL,
-            transaction_states: vec![TransactionState::default()]
+        Self { mode: AppMode::NORMAL, transaction_states: vec![TransactionState::default()] }
+    }
+}
+
+impl AppState {
+    pub async fn init(
+        &mut self,
+        rpc: &str,
+        transactions: Vec<TxHash>,
+    ) -> Result<&mut Self, eyre::Error> {
+        let mut first_transaction_state = TransactionState::default();
+        first_transaction_state.initialize(transactions[0], rpc).await.unwrap();
+
+        let mut transaction_states = vec![first_transaction_state];
+
+        if transactions.len() > 1 {
+            // versus view
+            self.mode = AppMode::VERSUS;
+            let mut second_transaction_state = TransactionState::default();
+            second_transaction_state.initialize(transactions[1], rpc).await.unwrap();
+            transaction_states.push(second_transaction_state);
         }
+
+        self.transaction_states = transaction_states;
+
+        Ok(self)
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum AppMode {
     VERSUS,
-    NORMAL
+    NORMAL,
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct TransactionState {
@@ -145,11 +166,7 @@ impl SlotStatus {
 }
 
 impl TransactionState {
-    pub async fn initialize(
-        &mut self,
-        transaction: TxHash,
-        rpc: &str,
-    ) -> Result<(), eyre::Error> {
+    pub async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
         let provider = provider::HTTPProvider::new(rpc).await?;
         let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
