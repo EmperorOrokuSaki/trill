@@ -68,7 +68,7 @@ impl AppState {
         pause: bool,
     ) -> Result<&mut Self, eyre::Error> {
         self.pause = pause;
-        
+
         if pause {
             return Ok(self);
         }

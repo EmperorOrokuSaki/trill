@@ -353,7 +353,7 @@ impl<'a> RenderData<'a> {
         Widget::render(read_chart, divided_space[1], self.buf);
     }
 
-    pub fn render_all(&mut self) {
+    fn render_normal(&mut self) {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -382,6 +382,17 @@ impl<'a> RenderData<'a> {
 
         if self.state.help {
             // display help box
+        }
+    }
+
+    fn render_versus(&mut self) {
+        // TODO!
+    }
+
+    pub fn render_all(&mut self) {
+        match self.state.mode {
+            crate::state::AppMode::VERSUS => self.render_versus(),
+            crate::state::AppMode::NORMAL => self.render_normal(),
         }
     }
 }
