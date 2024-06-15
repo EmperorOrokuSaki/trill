@@ -6,8 +6,8 @@ static ANVIL_DEFAULT_RPC: &str = "http://127.0.0.1:8545";
 #[command(version, about, long_about = None)]
 pub struct Cli {
     /// Transaction hash
-    #[arg(short, long)]
-    pub transaction: String,
+    #[arg(short, long, num_args=1..=2)]
+    pub transaction: Vec<String>,
     /// Frames per second
     #[arg(short, long, default_value_t = 4.0)]
     pub fps: f64,
