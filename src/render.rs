@@ -70,6 +70,7 @@ impl<'a> RenderData<'a> {
                             SlotStatus::ACTIVE => row.push(Cell::new(pair).green()),
                             SlotStatus::READING => row.push(Cell::new(pair).blue()),
                             SlotStatus::WRITING => row.push(Cell::new(pair).red()),
+                            SlotStatus::UNREAD => row.push(Cell::new(pair).magenta()),
                             SlotStatus::INIT => (),
                         }
                     }
@@ -100,6 +101,7 @@ impl<'a> RenderData<'a> {
                     SlotStatus::ACTIVE => row.push(Cell::new("■").green()),
                     SlotStatus::READING => row.push(Cell::new("■").blue()),
                     SlotStatus::WRITING => row.push(Cell::new("■").red()),
+                    SlotStatus::UNREAD => row.push(Cell::new("■").magenta()),
                     SlotStatus::INIT => (),
                 }
                 if slot % width == width - 1 || slot == self.state.slots.len() - 1 {

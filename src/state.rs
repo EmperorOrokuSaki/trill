@@ -83,6 +83,7 @@ pub enum SlotStatus {
     ACTIVE,
     READING,
     WRITING,
+    UNREAD,
 }
 
 impl Default for SlotStatus {
@@ -99,6 +100,7 @@ impl SlotStatus {
             SlotStatus::ACTIVE => "Active",
             SlotStatus::READING => "Reading",
             SlotStatus::WRITING => "Writing",
+            SlotStatus::UNREAD => "Unread",
         }
     }
 
@@ -212,8 +214,11 @@ impl AppState {
         let range_ending = self.raw_data.len() as u64;
 
         for slot in &mut self.slots {
-            if *slot != SlotStatus::EMPTY && *slot != SlotStatus::ACTIVE {
+            if *slot == SlotStatus::INIT || *slot == SlotStatus::READING {
                 *slot = SlotStatus::ACTIVE;
+            }
+            if *slot == SlotStatus::WRITING {
+                *slot = SlotStatus::UNREAD;
             }
         }
 
