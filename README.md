@@ -1,18 +1,20 @@
 # Trill
 
-Trill is a TUI memory profiler for EVM chains with a focus on efficiency. It is written in Rust and envisioned to be an open-source tool used by programmers who are interested in observing how transactions modify a smart contract's dynamic storage.
+![Trill Banner](./TrillBanner.png)
 
-![Trill running in terminal](./assets/trill.gif)
+Trill is a TUI memory profiler for EVM smart contracts with a focus on efficiency. It is written in Rust and envisioned to be an open-source tool used by programmers who are interested in observing how transactions modify a smart contract's dynamic storage.
 
 ## Introduction
 
 Memory profiling is crucial for understanding and optimizing the performance of smart contracts on EVM chains. Trill provides developers with a powerful tool to visualize and analyze memory usage during transaction execution, helping them identify potential bottlenecks and improve contract efficiency.
 
+If you are interested in the story of how Trill was written, check [this blog post](https://0xnimara.substack.com/p/building-trill). You can also check [feature idea discussions](https://github.com/EmperorOrokuSaki/trill/discussions) on the repository to contribute to Trill's future!
+
 > [!NOTE]
-> Trill was inspired by this [tweet](https://twitter.com/0xkarmacoma/status/1773385937323786662) from [karma](https://twitter.com/0xkarmacoma)!
-> This project is currently undergoing tests and could potentially have issues. In case you find any problem during building or running it, please open an issue.
+> This project is currently undergoing tests and could potentially have issues. If you find any problem while building or running it, please open an issue.
 
 ## Installation
+![Trill running in terminal](./assets/trill.gif)
 
 > [!IMPORTANT]
 > Trill has not been tested on MacOS. If you encounter any issues with the MacOS build, please share the details in this [issue](https://github.com/EmperorOrokuSaki/trill/issues/2)
@@ -50,7 +52,7 @@ Options:
 
 You can use the following command. Please, make sure your RPC supports `debug_traceTransaction` calls:
 
-```$ cargo run -- --transaction <TX_HASH> --rpc <RPC_URL>```
+```$ trill --transaction <TX_HASH> --rpc <RPC_URL>```
 
 #### Anvil
 
@@ -64,7 +66,7 @@ To use Trill with custom transactions in the local Anvil environment, follow the
 
 3. Use the transaction hash to start Trill:
 
-```$ cargo run -- --transaction <TX_HASH>```
+```$ trill --transaction <TX_HASH>```
 
 ### Launch Script
 The [launch.sh](./launch.sh) shell script demonstrates how to set up the Anvil environment and use Trill for profiling a smart contract's memory propagation during a transaction:
@@ -73,19 +75,6 @@ The [launch.sh](./launch.sh) shell script demonstrates how to set up the Anvil e
 
 ### Test Scripts
 The [scripts](./scripts) directory contains several shell scripts that deploy and interact with different well-known smart contracts.
-
-## Supported Opcodes
-Trill supports the following opcodes for memory profiling:
-
-- MSTORE
-- MSTORE8
-- MLOAD
-- CALLDATACOPY
-- MSIZE
-- EXTCODECOPY
-- CODECOPY
-- RETURNDATACOPY
-- MCOPY
 
 ### Opcode Argument Parsing
 Trill uses the [opcode-parser](https://github.com/EmperorOrokuSaki/opcode-parser) crate to parse the arguments for the supported opcodes.
@@ -97,6 +86,9 @@ If you encounter any issues during installation or usage, please open an issue o
 This version of Trill can potentially (and most likely) have many bugs. All community contributions are welcome, even if they are simple documentation improvements.
 
 Additionally, if you are interested in contributing to the code of the project, please check [these](https://github.com/EmperorOrokuSaki/trill/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22+label%3A%22help+wanted%22+) issues.
+
+## Acknowledgements
+Trill was inspired by this [tweet](https://twitter.com/0xkarmacoma/status/1773385937323786662) from [karma](https://twitter.com/0xkarmacoma)!
 
 ## Contact
 For questions, feedback, or collaboration opportunities, please start a [discussion](https://github.com/EmperorOrokuSaki/trill/discussions) or [issue](https://github.com/EmperorOrokuSaki/trill/issues) on GitHub.
