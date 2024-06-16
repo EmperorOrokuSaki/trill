@@ -1,5 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
+use color_eyre::owo_colors::OwoColorize;
 use itertools::Itertools;
 use ratatui::{
     buffer::Buffer,
@@ -279,7 +280,7 @@ impl<'a> RenderData<'a> {
         );
     }
 
-    fn render_chart(&mut self, transaction_index: usize, layout: Rect) {
+    fn render_charts(&mut self, transaction_index: usize, layout: Rect) {
         let transaction_state = &self.state.transaction_states[transaction_index];
         let divided_space = Layout::default()
             .direction(Direction::Horizontal)
@@ -415,50 +416,159 @@ impl<'a> RenderData<'a> {
         self.render_transaction_box(0, transaction_box);
         self.render_current_operation_box(0, opcode_box);
         self.render_operation_history(0, history_box);
-        self.render_chart(0, charts_box);
+        self.render_charts(0, charts_box);
 
         if self.state.help {
             // display help box
         }
     }
 
+    /*
+    ______________________________________________________________________
+    |                                                                    |
+    |                           memory0_box                              |
+    |                      Height 25%, Width 100%                        |
+    |____________________________________________________________________|
+    |                                                                    |
+    |                           memory1_box                              |
+    |                      Height 25%, Width 100%                        |
+    |____________________________________________________________________|
+    |                                                     |              |
+    |                                                     |              |
+    |                                                     |              |
+    |                     chart_box                       |  history_box |
+    |                Height 25%, Width 90%                |  Height 50%  |
+    |                                                     |  Width 10%   |
+    |                                                     |              |
+    |                                                     |              |
+    |_____________________________________________________|______________|
+    */
     fn render_versus(&mut self) {
-        // TODO!
-        let layout = Layout::default()
+        let half_divded_area = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(self.area);
 
-        let memory_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(layout[0]);
+        let (memory_layout, bottom_layout) = (half_divded_area[0], half_divded_area[1]);
 
-        let bottom_layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints(vec![Constraint::Percentage(90), Constraint::Percentage(10)])
-            .split(layout[1]);
-
-        let info_chart_layout = Layout::default()
+        let divided_memory_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(bottom_layout[0]);
+            .split(memory_layout);
 
-        let info_layout = Layout::default()
+        let (memory0_box, memory1_box) = (divided_memory_layout[0], divided_memory_layout[1]);
+
+        let divided_bottom_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(90), Constraint::Percentage(10)])
+            .split(bottom_layout);
+
+        let (bottom_left_layout, history_box) =
+            (divided_bottom_layout[0], divided_bottom_layout[1]);
+
+        let divided_bottom_left_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(bottom_left_layout);
+
+        let (info_boxes_layout, charts_box) =
+            (divided_bottom_left_layout[0], divided_bottom_left_layout[1]);
+
+        let info_boxes = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(info_chart_layout[0]);
+            .split(info_boxes_layout);
 
-        self.render_memory(0, memory_layout[0]); // First transaction
-        self.render_memory(1, memory_layout[1]); // Second transaction
+        let (transaction_box, opcode_box) = (info_boxes[0], info_boxes[1]);
 
-        self.render_current_operation_box(0, info_layout[1]);
-        self.render_operation_history(0, bottom_layout[1]);
-        self.render_chart(0, info_chart_layout[1]);
+        self.render_memory(0, memory0_box);
+        self.render_memory(1, memory1_box);
+        self.render_chart(bottom_layout);
 
         if self.state.help {
             // display help box
         }
+    }
+
+    fn render_chart(&mut self, layout: Rect) {
+        let transaction_zero = &self.state.transaction_states[0];
+        let transaction_one = &self.state.transaction_states[1];
+
+        let title = Title::from(" Reads & Writes ".bold().red());
+
+        let block = Block::default()
+            .title(title.alignment(Alignment::Center))
+            .borders(Borders::ALL)
+            .border_set(border::THICK);
+
+        let datasets = vec![
+            // Tx0 writes
+            Dataset::default()
+                .name("Tx0 writes")
+                .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().red())
+                .data(&transaction_zero.write_dataset),
+            // Tx0 reads
+            Dataset::default()
+                .name("Tx0 Reads")
+                .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().blue())
+                .data(&transaction_zero.read_dataset),
+            // Tx1 writes
+            Dataset::default()
+                .name("Tx1 Writes")
+                .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().light_red())
+                .data(&transaction_one.write_dataset),
+            // Tx1 reads
+            Dataset::default()
+                .name("Tx1 Reads")
+                .marker(symbols::Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().light_blue())
+                .data(&transaction_one.read_dataset),
+        ];
+
+        let mut x_axis_upper_bound : f64;
+        if transaction_zero.write_dataset.len() as f64 >= transaction_one.write_dataset.len() as f64 {
+            x_axis_upper_bound = transaction_zero.write_dataset.len() as f64;
+        } else {
+            x_axis_upper_bound = transaction_one.write_dataset.len() as f64;
+        }
+
+        let mut y_axis_upper_bound : f64;
+        
+        if transaction_zero.write_dataset.last().unwrap().1 as f64 >= transaction_one.write_dataset.last().unwrap().1 as f64 {
+            y_axis_upper_bound = transaction_zero.write_dataset.last().unwrap().1 as f64;
+        } else {
+            y_axis_upper_bound = transaction_one.write_dataset.last().unwrap().1 as f64;
+        }
+
+        // Create the X axis and define its properties
+        let x_axis = Axis::default()
+            .style(Style::default().white())
+            .bounds([0.0, x_axis_upper_bound])
+            .labels(vec!["0".into(), x_axis_upper_bound.ceil().to_string().into()]);
+
+        let y_axis = Axis::default()
+            .style(Style::default().white())
+            .bounds([0.0, y_axis_upper_bound])
+            .labels(vec![
+                "0".into(),
+                y_axis_upper_bound.ceil().to_string().into(),
+            ]);
+
+        // Create the chart and link all the parts together
+        let chart = Chart::new(datasets)
+            .block(Block::default().title("Writes"))
+            .x_axis(x_axis.clone())
+            .y_axis(y_axis.clone())
+            .block(block);
+
+        Widget::render(chart, layout, self.buf);
     }
 
     pub fn render_all(&mut self) {
