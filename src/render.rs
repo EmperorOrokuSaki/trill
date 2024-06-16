@@ -387,7 +387,6 @@ impl<'a> RenderData<'a> {
     }
 
     fn render_versus(&mut self) {
-
         // TODO!
         let layout = Layout::default()
             .direction(Direction::Vertical)
@@ -415,8 +414,8 @@ impl<'a> RenderData<'a> {
             .split(info_chart_layout[0]);
 
         self.render_memory(0, memory_layout[0]); // First transaction
-        self.render_memory(1, memory_layout[1]); // Second transaction 
-    
+        self.render_memory(1, memory_layout[1]); // Second transaction
+
         self.render_current_operation_box(info_layout[1]);
         self.render_operation_history(bottom_layout[1]);
         self.render_chart(info_chart_layout[1]);
