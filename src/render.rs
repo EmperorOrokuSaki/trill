@@ -21,7 +21,8 @@ pub struct RenderData<'a> {
 }
 
 impl<'a> RenderData<'a> {
-    fn render_memory(&mut self, layout: Rect) {
+    fn render_memory(&mut self, transaction_index: usize, layout: Rect) {
+        let transaction_state = self.state.transaction_states[transaction_index];
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
             " Raw ".into(),
@@ -50,7 +51,7 @@ impl<'a> RenderData<'a> {
             let mut first_slot: usize = self.state.table_beginning_index as usize;
 
             let operation_memory =
-                &self.state.raw_data[(self.state.next_operation - 1) as usize].memory;
+                &transaction_state.raw_data[(transaction_state.next_operation - 1) as usize].memory;
 
             if let Some(memory) = operation_memory {
                 if first_slot >= memory.len() {
@@ -65,7 +66,7 @@ impl<'a> RenderData<'a> {
                         vec![Cell::new((index + first_slot).to_string()).gray()];
                     for chunk in &slot.chars().chunks(2) {
                         let pair: String = chunk.collect();
-                        match self.state.slots[index + first_slot] {
+                        match transaction_state.slots[index + first_slot] {
                             SlotStatus::EMPTY => row.push(Cell::new(pair).gray()),
                             SlotStatus::ACTIVE => row.push(Cell::new(pair).green()),
                             SlotStatus::READING => row.push(Cell::new(pair).blue()),
@@ -84,19 +85,19 @@ impl<'a> RenderData<'a> {
             let mut row: Vec<Cell> = vec![];
             let width: usize = (layout.width / 2) as usize;
             let mut first_slot: usize = self.state.table_beginning_index as usize * width;
-            let mut range_ending = self.state.slots.len();
+            let mut range_ending = transaction_state.slots.len();
 
-            while first_slot > self.state.slots.len() {
+            while first_slot > transaction_state.slots.len() {
                 self.state.table_beginning_index -= 1;
                 first_slot = self.state.table_beginning_index as usize * width;
             }
 
-            if width * height < self.state.slots.len() - first_slot {
+            if width * height < transaction_state.slots.len() - first_slot {
                 range_ending = width * height;
             }
 
             for slot in first_slot..range_ending {
-                match self.state.slots[slot] {
+                match transaction_state.slots[slot] {
                     SlotStatus::EMPTY => row.push(Cell::new("■").gray()),
                     SlotStatus::ACTIVE => row.push(Cell::new("■").green()),
                     SlotStatus::READING => row.push(Cell::new("■").blue()),
@@ -104,7 +105,7 @@ impl<'a> RenderData<'a> {
                     SlotStatus::UNREAD => row.push(Cell::new("■").magenta()),
                     SlotStatus::INIT => (),
                 }
-                if slot % width == width - 1 || slot == self.state.slots.len() - 1 {
+                if slot % width == width - 1 || slot == transaction_state.slots.len() - 1 {
                     rows.push(Row::new(row.clone()));
                     row.clear();
                 }
@@ -386,7 +387,43 @@ impl<'a> RenderData<'a> {
     }
 
     fn render_versus(&mut self) {
+
         // TODO!
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(self.area);
+
+        let memory_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(layout[0]);
+
+        let bottom_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(90), Constraint::Percentage(10)])
+            .split(layout[1]);
+
+        let info_chart_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(bottom_layout[0]);
+
+        let info_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(info_chart_layout[0]);
+
+        self.render_memory(0, memory_layout[0]); // First transaction
+        self.render_memory(1, memory_layout[1]); // Second transaction 
+    
+        self.render_current_operation_box(info_layout[1]);
+        self.render_operation_history(bottom_layout[1]);
+        self.render_chart(info_chart_layout[1]);
+
+        if self.state.help {
+            // display help box
+        }
     }
 
     pub fn render_all(&mut self) {
