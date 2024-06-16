@@ -452,7 +452,7 @@ impl<'a> RenderData<'a> {
         let (memory_layout, bottom_layout) = (half_divded_area[0], half_divded_area[1]);
 
         let divided_memory_layout = Layout::default()
-            .direction(Direction::Vertical)
+            .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(memory_layout);
 
@@ -496,8 +496,16 @@ impl<'a> RenderData<'a> {
 
         let title = Title::from(" Reads & Writes ".bold().red());
 
+        let instructions = Title::from(Line::from(vec![
+            " • Tx0 Writes ".bold().red(),
+            " • Tx0 Reads ".bold().blue(),
+            " • Tx1 Writes ".bold().light_yellow(),
+            " • Tx1 Reads ".bold().cyan(),
+        ]));
+
         let block = Block::default()
             .title(title.alignment(Alignment::Center))
+            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
@@ -521,27 +529,30 @@ impl<'a> RenderData<'a> {
                 .name("Tx1 Writes")
                 .marker(symbols::Marker::Dot)
                 .graph_type(GraphType::Line)
-                .style(Style::default().light_red())
+                .style(Style::default().light_yellow())
                 .data(&transaction_one.write_dataset),
             // Tx1 reads
             Dataset::default()
                 .name("Tx1 Reads")
                 .marker(symbols::Marker::Dot)
                 .graph_type(GraphType::Line)
-                .style(Style::default().light_blue())
+                .style(Style::default().cyan())
                 .data(&transaction_one.read_dataset),
         ];
 
-        let mut x_axis_upper_bound : f64;
-        if transaction_zero.write_dataset.len() as f64 >= transaction_one.write_dataset.len() as f64 {
+        let mut x_axis_upper_bound: f64;
+        if transaction_zero.write_dataset.len() as f64 >= transaction_one.write_dataset.len() as f64
+        {
             x_axis_upper_bound = transaction_zero.write_dataset.len() as f64;
         } else {
             x_axis_upper_bound = transaction_one.write_dataset.len() as f64;
         }
 
-        let mut y_axis_upper_bound : f64;
-        
-        if transaction_zero.write_dataset.last().unwrap().1 as f64 >= transaction_one.write_dataset.last().unwrap().1 as f64 {
+        let mut y_axis_upper_bound: f64;
+
+        if transaction_zero.write_dataset.last().unwrap().1 as f64
+            >= transaction_one.write_dataset.last().unwrap().1 as f64
+        {
             y_axis_upper_bound = transaction_zero.write_dataset.last().unwrap().1 as f64;
         } else {
             y_axis_upper_bound = transaction_one.write_dataset.last().unwrap().1 as f64;
@@ -556,10 +567,7 @@ impl<'a> RenderData<'a> {
         let y_axis = Axis::default()
             .style(Style::default().white())
             .bounds([0.0, y_axis_upper_bound])
-            .labels(vec![
-                "0".into(),
-                y_axis_upper_bound.ceil().to_string().into(),
-            ]);
+            .labels(vec!["0".into(), y_axis_upper_bound.ceil().to_string().into()]);
 
         // Create the chart and link all the parts together
         let chart = Chart::new(datasets)
