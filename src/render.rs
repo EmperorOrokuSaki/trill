@@ -1,3 +1,5 @@
+use std::{thread::sleep, time::Duration};
+
 use itertools::Itertools;
 use ratatui::{
     buffer::Buffer,
@@ -22,7 +24,7 @@ pub struct RenderData<'a> {
 
 impl<'a> RenderData<'a> {
     fn render_memory(&mut self, transaction_index: usize, layout: Rect) {
-        let transaction_state = self.state.transaction_states[transaction_index];
+        let transaction_state = self.state.transaction_states[transaction_index].clone();
         let title = Title::from(" Trill ".bold());
         let instructions = Title::from(Line::from(vec![
             " Raw ".into(),
@@ -112,6 +114,7 @@ impl<'a> RenderData<'a> {
             }
             constraints = vec![Constraint::Length(1); width];
         }
+
         StatefulWidget::render(
             Table::new(rows, constraints).block(block),
             layout,
@@ -120,20 +123,19 @@ impl<'a> RenderData<'a> {
         );
     }
 
-    fn render_transaction_box(&mut self, layout: Rect) {
-        let transaction = &self.state.transaction;
+    fn render_transaction_box(&mut self, transaction_index: usize, layout: Rect) {
+        let transaction_state = &self.state.transaction_states[transaction_index];
+        let transaction = &transaction_state.transaction;
         let title = Title::from(" Transaction info ".bold());
         let tx_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::THICK);
-        let success = match self.state.transaction_success {
-            true => {
-                Cell::new(self.state.transaction_success.to_string()).style(Style::new().green())
-            }
-            false => {
-                Cell::new(self.state.transaction_success.to_string()).style(Style::new().red())
-            }
+        let success = match transaction_state.transaction_success {
+            true => Cell::new(transaction_state.transaction_success.to_string())
+                .style(Style::new().green()),
+            false => Cell::new(transaction_state.transaction_success.to_string())
+                .style(Style::new().red()),
         };
         let tx_info_rows = vec![
             Row::new(vec![
@@ -170,7 +172,8 @@ impl<'a> RenderData<'a> {
         StatefulWidget::render(tx_info_table, layout, self.buf, &mut s);
     }
 
-    fn render_current_operation_box(&mut self, layout: Rect) {
+    fn render_current_operation_box(&mut self, transaction_index: usize, layout: Rect) {
+        let transaction_state = &self.state.transaction_states[transaction_index];
         let title = Title::from(" Operation info ".bold());
         let op_info_block = Block::default()
             .title(title.alignment(Alignment::Center))
@@ -178,7 +181,7 @@ impl<'a> RenderData<'a> {
             .border_set(border::THICK);
 
         let mut vec = vec![];
-        let op = &self.state.operation_to_render;
+        let op = &transaction_state.operation_to_render;
         let operation_code = match SlotStatus::from_opcode(&op.operation) {
             SlotStatus::READING => Cell::new(op.operation.text()).blue(),
             SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
@@ -217,7 +220,8 @@ impl<'a> RenderData<'a> {
         StatefulWidget::render(op_info_table, layout, self.buf, &mut s);
     }
 
-    fn render_operation_history(&mut self, layout: Rect) {
+    fn render_operation_history(&mut self, transaction_index: usize, layout: Rect) {
+        let transaction_state = &self.state.transaction_states[transaction_index];
         let title = Title::from(" History ".bold());
 
         let instructions = Title::from(Line::from(vec![
@@ -232,8 +236,7 @@ impl<'a> RenderData<'a> {
             .borders(Borders::ALL)
             .border_set(border::THICK);
 
-        let items: Vec<Line> = self
-            .state
+        let items: Vec<Line> = transaction_state
             .operation_codes
             .iter()
             .map(|op| match SlotStatus::from_opcode(op) {
@@ -276,7 +279,8 @@ impl<'a> RenderData<'a> {
         );
     }
 
-    fn render_chart(&mut self, layout: Rect) {
+    fn render_chart(&mut self, transaction_index: usize, layout: Rect) {
+        let transaction_state = &self.state.transaction_states[transaction_index];
         let divided_space = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -301,40 +305,40 @@ impl<'a> RenderData<'a> {
             .marker(symbols::Marker::Dot)
             .graph_type(GraphType::Line)
             .style(Style::default().red())
-            .data(&self.state.write_dataset)];
+            .data(&transaction_state.write_dataset)];
 
         let read_dataset = vec![Dataset::default()
             .name("Reads")
             .marker(symbols::Marker::Dot)
             .graph_type(GraphType::Line)
             .style(Style::default().blue())
-            .data(&self.state.read_dataset)];
+            .data(&transaction_state.read_dataset)];
 
-        if self.state.write_dataset.len() > self.state.read_dataset.len() {
+        if transaction_state.write_dataset.len() > transaction_state.read_dataset.len() {
             dbg!("DISCREPANCY");
         }
 
         // Create the X axis and define its properties
         let x_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, self.state.write_dataset.len() as f64])
-            .labels(vec!["0".into(), self.state.write_dataset.len().to_string().into()]);
+            .bounds([0.0, transaction_state.write_dataset.len() as f64])
+            .labels(vec!["0".into(), transaction_state.write_dataset.len().to_string().into()]);
 
         // Create the Y axis and define its properties
         let write_y_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, self.state.write_dataset.last().unwrap().1 as f64])
+            .bounds([0.0, transaction_state.write_dataset.last().unwrap().1 as f64])
             .labels(vec![
                 "0".into(),
-                (self.state.write_dataset.last().unwrap().1).ceil().to_string().into(),
+                (transaction_state.write_dataset.last().unwrap().1).ceil().to_string().into(),
             ]);
 
         let read_y_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, self.state.read_dataset.last().unwrap().1 as f64])
+            .bounds([0.0, transaction_state.read_dataset.last().unwrap().1 as f64])
             .labels(vec![
                 "0".into(),
-                (self.state.read_dataset.last().unwrap().1).ceil().to_string().into(),
+                (transaction_state.read_dataset.last().unwrap().1).ceil().to_string().into(),
             ]);
 
         // Create the chart and link all the parts together
@@ -354,32 +358,64 @@ impl<'a> RenderData<'a> {
         Widget::render(read_chart, divided_space[1], self.buf);
     }
 
+    /*
+    ______________________________________________________________________
+    |                                                                    |
+    |                                                                    |
+    |                                                                    |
+    |                                                                    |
+    |                           memory_box                               |
+    |                      Height 50%, Width 100%                        |
+    |                                                                    |
+    |                                                                    |
+    |                                                                    |
+    |____________________________________________________________________|
+    |                          |                          |              |
+    |      transaction_box     |        opcode_box        |              |
+    |      Height 25%          |        Height 25%        |              |
+    |      Width 45%           |        Width 45%         |  history_box |
+    |__________________________|__________________________|  Height 50%  |
+    |                                                     |  Width 10%   |
+    |                      charts_box                     |              |
+    |                Height 25%, Width 90%                |              |
+    |_____________________________________________________|______________|
+    */
     fn render_normal(&mut self) {
-        let layout = Layout::default()
+        let half_divded_area = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(self.area);
 
-        let bottom_layout = Layout::default()
+        let (memory_box, bottom_layout) = (half_divded_area[0], half_divded_area[1]);
+
+        let divided_bottom_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(90), Constraint::Percentage(10)])
-            .split(layout[1]);
+            .split(bottom_layout);
 
-        let info_chart_layout = Layout::default()
+        let (bottom_left_layout, history_box) =
+            (divided_bottom_layout[0], divided_bottom_layout[1]);
+
+        let divided_bottom_left_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(bottom_layout[0]);
+            .split(bottom_left_layout);
 
-        let info_layout = Layout::default()
+        let (info_boxes_layout, charts_box) =
+            (divided_bottom_left_layout[0], divided_bottom_left_layout[1]);
+
+        let info_boxes = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(info_chart_layout[0]);
+            .split(info_boxes_layout);
 
-        self.render_memory(layout[0]);
-        self.render_transaction_box(info_layout[0]);
-        self.render_current_operation_box(info_layout[1]);
-        self.render_operation_history(bottom_layout[1]);
-        self.render_chart(info_chart_layout[1]);
+        let (transaction_box, opcode_box) = (info_boxes[0], info_boxes[1]);
+
+        self.render_memory(0, memory_box);
+        self.render_transaction_box(0, transaction_box);
+        self.render_current_operation_box(0, opcode_box);
+        self.render_operation_history(0, history_box);
+        self.render_chart(0, charts_box);
 
         if self.state.help {
             // display help box
@@ -416,9 +452,9 @@ impl<'a> RenderData<'a> {
         self.render_memory(0, memory_layout[0]); // First transaction
         self.render_memory(1, memory_layout[1]); // Second transaction
 
-        self.render_current_operation_box(info_layout[1]);
-        self.render_operation_history(bottom_layout[1]);
-        self.render_chart(info_chart_layout[1]);
+        self.render_current_operation_box(0, info_layout[1]);
+        self.render_operation_history(0, bottom_layout[1]);
+        self.render_chart(0, info_chart_layout[1]);
 
         if self.state.help {
             // display help box

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::sleep, time::Duration};
 
 use alloy::{
     primitives::{TxHash, Uint, U256},
@@ -73,7 +73,7 @@ impl AppState {
             return Ok(self);
         }
 
-        for mut state in self.transaction_states.clone() {
+        for state in &mut self.transaction_states {
             state.run(iteration, forward).await.unwrap();
         }
 
