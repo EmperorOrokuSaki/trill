@@ -7,8 +7,9 @@ use ratatui::{
     text::Line,
     widgets::{
         block::{Position, Title},
-        Axis, Block, Borders, Cell, Chart, Dataset, GraphType, Paragraph, Row, Scrollbar,
-        ScrollbarOrientation, ScrollbarState, StatefulWidget, Table, TableState, Widget,
+        Axis, Bar, BarChart, BarGroup, Block, Borders, Cell, Chart, Dataset, GraphType, Paragraph,
+        Row, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Table, TableState,
+        Widget,
     },
 };
 
@@ -418,6 +419,41 @@ impl<'a> RenderData<'a> {
         }
     }
 
+    fn render_stack(&mut self, transaction_indexes: Vec<usize>, layouts: Vec<Rect>) {
+        let indexes_length = transaction_indexes.len();
+
+        if indexes_length != layouts.len() {
+            return;
+        }
+
+        for index in 0..indexes_length {
+            let transaction_state = &self.state.transaction_states[index];
+            let bar_value = match &transaction_state.operation_to_render.stack {
+                Some(stack) => stack.len(),
+                None => 0,
+            };
+
+            let max_value = match bar_value > 10 {
+                True => bar_value + 5,
+                False => 10,
+            };
+
+            let chart = BarChart::default()
+                .block(Block::bordered().title("Stack"))
+                .bar_width(1)
+                .bar_style(Style::new().white())
+                .value_style(Style::new().red().bold())
+                .label_style(Style::new().white())
+                .direction(Direction::Horizontal)
+                .data(&[("Size", bar_value as u64)])
+                // .data(
+                //     BarGroup::default().bars(&[Bar::default().value(10)]),
+                // )
+                .max(max_value as u64);
+            Widget::render(chart, layouts[index], self.buf);
+        }
+    }
+
     /*
     ______________________________________________________________________
     |                                                                    |
@@ -517,16 +553,28 @@ impl<'a> RenderData<'a> {
 
         let divided_memory0_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(25), Constraint::Percentage(75)])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(75)])
             .split(divided_memory_layout[0]);
 
         let divided_memory1_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(25), Constraint::Percentage(75)])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(75)])
             .split(divided_memory_layout[1]);
 
         let (memory0_box, memory1_box) = (divided_memory0_layout[1], divided_memory1_layout[1]);
+
+        let divided_info0_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(divided_memory0_layout[0]);
+
+        let divided_info1_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(divided_memory1_layout[0]);
+
         let (opcode0_box, opcode1_box) = (divided_memory0_layout[0], divided_memory1_layout[0]);
+        let (stack0_box, stack1_box) = (divided_info0_layout[1], divided_info1_layout[1]);
 
         let divided_bottom_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -552,9 +600,8 @@ impl<'a> RenderData<'a> {
         let (transaction_box, opcode_box) = (info_boxes[0], info_boxes[1]);
 
         self.render_memory(vec![0, 1], vec![memory0_box, memory1_box]);
-
+        self.render_stack(vec![0, 1], vec![stack1_box, stack0_box]);
         self.render_current_operation_box(vec![0, 1], vec![opcode1_box, opcode0_box]);
-
         self.render_chart(bottom_layout);
 
         if self.state.help {
