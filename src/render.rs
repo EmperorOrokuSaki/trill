@@ -21,104 +21,120 @@ pub struct RenderData<'a> {
 }
 
 impl<'a> RenderData<'a> {
-    fn render_memory(&mut self, transaction_index: usize, layout: Rect) {
-        let transaction_state = self.state.transaction_states[transaction_index].clone();
-        let title = Title::from(" Trill ".bold());
-        let instructions = Title::from(Line::from(vec![
-            " Raw ".into(),
-            "<F>".blue().bold(),
-            " Up ".into(),
-            "<W>".green().bold(),
-            " Pause ".into(),
-            "<Space>".yellow().bold(),
-            " Down ".into(),
-            "<S>".green().bold(),
-            " Quit ".into(),
-            "<Q> ".red().bold(),
-        ]));
-        let block = Block::default()
-            .title(title.alignment(Alignment::Center))
-            .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
-            .borders(Borders::TOP)
-            .border_set(border::THICK);
-
-        let mut s = TableState::default();
-        let mut constraints: Vec<Constraint> = vec![];
-        let mut rows: Vec<Row> = vec![];
-        let height: usize = (layout.height - 2) as usize;
-
-        if self.state.display_memory_data {
-            let mut first_slot: usize = self.state.table_beginning_index as usize;
-
-            let operation_memory =
-                &transaction_state.raw_data[(transaction_state.next_operation - 1) as usize].memory;
-
-            if let Some(memory) = operation_memory {
-                if first_slot >= memory.len() {
-                    first_slot = memory.len() - 1;
-                }
-                let data = memory.iter().skip(first_slot).enumerate();
-                for (index, slot) in data {
-                    if index >= height {
-                        break;
-                    }
-                    let mut row: Vec<Cell> =
-                        vec![Cell::new((index + first_slot).to_string()).gray()];
-                    for chunk in &slot.chars().chunks(2) {
-                        let pair: String = chunk.collect();
-                        match transaction_state.slots[index + first_slot] {
-                            SlotStatus::Empty => row.push(Cell::new(pair).gray()),
-                            SlotStatus::Active => row.push(Cell::new(pair).green()),
-                            SlotStatus::Reading => row.push(Cell::new(pair).blue()),
-                            SlotStatus::Writing => row.push(Cell::new(pair).red()),
-                            SlotStatus::Unread => row.push(Cell::new(pair).magenta()),
-                            SlotStatus::Init => (),
-                        }
-                    }
-                    rows.push(Row::new(row));
-                }
-            }
-
-            constraints = vec![Constraint::Percentage(4)];
-            constraints.extend(vec![Constraint::Percentage(3); 32]);
-        } else {
-            let mut row: Vec<Cell> = vec![];
-            let width: usize = (layout.width / 2) as usize;
-            let mut first_slot: usize = self.state.table_beginning_index as usize * width;
-            let mut range_ending = transaction_state.slots.len();
-
-            while first_slot > transaction_state.slots.len() {
-                self.state.table_beginning_index -= 1;
-                first_slot = self.state.table_beginning_index as usize * width;
-            }
-
-            if width * height < transaction_state.slots.len() - first_slot {
-                range_ending = width * height;
-            }
-
-            for slot in first_slot..range_ending {
-                match transaction_state.slots[slot] {
-                    SlotStatus::Empty => row.push(Cell::new("■").gray()),
-                    SlotStatus::Active => row.push(Cell::new("■").green()),
-                    SlotStatus::Reading => row.push(Cell::new("■").blue()),
-                    SlotStatus::Writing => row.push(Cell::new("■").red()),
-                    SlotStatus::Unread => row.push(Cell::new("■").magenta()),
-                    SlotStatus::Init => (),
-                }
-                if slot % width == width - 1 || slot == transaction_state.slots.len() - 1 {
-                    rows.push(Row::new(row.clone()));
-                    row.clear();
-                }
-            }
-            constraints = vec![Constraint::Length(1); width];
+    fn render_memory(&mut self, transaction_indexes: Vec<usize>, layouts: Vec<Rect>) {
+        let indexes_length = transaction_indexes.len();
+        if indexes_length != layouts.len() {
+            return;
         }
 
-        StatefulWidget::render(
-            Table::new(rows, constraints).block(block),
-            layout,
-            self.buf,
-            &mut s,
-        );
+        for index in 0..indexes_length {
+            let transaction_state = self.state.transaction_states[index].clone();
+            let layout = layouts[index];
+
+            let mut block: Block;
+
+            if indexes_length == 1 {
+                let title = Title::from(" Trill ".bold());
+                let instructions = Title::from(Line::from(vec![
+                    " Raw ".into(),
+                    "<F>".blue().bold(),
+                    " Up ".into(),
+                    "<W>".green().bold(),
+                    " Pause ".into(),
+                    "<Space>".yellow().bold(),
+                    " Down ".into(),
+                    "<S>".green().bold(),
+                    " Quit ".into(),
+                    "<Q> ".red().bold(),
+                ]));
+                block = Block::default()
+                    .title(title.alignment(Alignment::Center))
+                    .title(instructions.alignment(Alignment::Center).position(Position::Bottom))
+                    .borders(Borders::TOP)
+                    .border_set(border::THICK);
+            } else {
+                block = Block::default().borders(Borders::ALL).border_set(border::THICK);
+            }
+
+            let mut s = TableState::default();
+            let mut constraints: Vec<Constraint> = vec![];
+            let mut rows: Vec<Row> = vec![];
+            let height: usize = (layout.height - 2) as usize;
+
+            if self.state.display_memory_data {
+                let mut first_slot: usize = self.state.table_beginning_index as usize;
+
+                let operation_memory = &transaction_state.raw_data
+                    [(transaction_state.next_operation - 1) as usize]
+                    .memory;
+
+                if let Some(memory) = operation_memory {
+                    if first_slot >= memory.len() {
+                        first_slot = memory.len() - 1;
+                    }
+                    let data = memory.iter().skip(first_slot).enumerate();
+                    for (index, slot) in data {
+                        if index >= height {
+                            break;
+                        }
+                        let mut row: Vec<Cell> =
+                            vec![Cell::new((index + first_slot).to_string()).gray()];
+                        for chunk in &slot.chars().chunks(2) {
+                            let pair: String = chunk.collect();
+                            match transaction_state.slots[index + first_slot] {
+                                SlotStatus::Empty => row.push(Cell::new(pair).gray()),
+                                SlotStatus::Active => row.push(Cell::new(pair).green()),
+                                SlotStatus::Reading => row.push(Cell::new(pair).blue()),
+                                SlotStatus::Writing => row.push(Cell::new(pair).red()),
+                                SlotStatus::Unread => row.push(Cell::new(pair).magenta()),
+                                SlotStatus::Init => (),
+                            }
+                        }
+                        rows.push(Row::new(row));
+                    }
+                }
+
+                constraints = vec![Constraint::Percentage(4)];
+                constraints.extend(vec![Constraint::Percentage(3); 32]);
+            } else {
+                let mut row: Vec<Cell> = vec![];
+                let width: usize = (layout.width / 2) as usize;
+                let mut first_slot: usize = self.state.table_beginning_index as usize * width;
+                let mut range_ending = transaction_state.slots.len();
+
+                while first_slot > transaction_state.slots.len() {
+                    self.state.table_beginning_index -= 1;
+                    first_slot = self.state.table_beginning_index as usize * width;
+                }
+
+                if width * height < transaction_state.slots.len() - first_slot {
+                    range_ending = width * height;
+                }
+
+                for slot in first_slot..range_ending {
+                    match transaction_state.slots[slot] {
+                        SlotStatus::Empty => row.push(Cell::new("■").gray()),
+                        SlotStatus::Active => row.push(Cell::new("■").green()),
+                        SlotStatus::Reading => row.push(Cell::new("■").blue()),
+                        SlotStatus::Writing => row.push(Cell::new("■").red()),
+                        SlotStatus::Unread => row.push(Cell::new("■").magenta()),
+                        SlotStatus::Init => (),
+                    }
+                    if slot % width == width - 1 || slot == transaction_state.slots.len() - 1 {
+                        rows.push(Row::new(row.clone()));
+                        row.clear();
+                    }
+                }
+                constraints = vec![Constraint::Length(1); width];
+            }
+
+            StatefulWidget::render(
+                Table::new(rows, constraints).block(block),
+                layout,
+                self.buf,
+                &mut s,
+            );
+        }
     }
 
     fn render_transaction_box(&mut self, transaction_index: usize, layout: Rect) {
@@ -409,7 +425,7 @@ impl<'a> RenderData<'a> {
 
         let (transaction_box, opcode_box) = (info_boxes[0], info_boxes[1]);
 
-        self.render_memory(0, memory_box);
+        self.render_memory(vec![0], vec![memory_box]);
         self.render_transaction_box(0, transaction_box);
         self.render_current_operation_box(0, opcode_box);
         self.render_operation_history(0, history_box);
@@ -453,7 +469,18 @@ impl<'a> RenderData<'a> {
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(memory_layout);
 
-        let (memory0_box, memory1_box) = (divided_memory_layout[0], divided_memory_layout[1]);
+        let divided_memory0_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+            .split(divided_memory_layout[0]);
+
+        let divided_memory1_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(20), Constraint::Percentage(80)])
+            .split(divided_memory_layout[1]);
+
+        let (memory0_box, memory1_box) = (divided_memory0_layout[1], divided_memory1_layout[1]);
+        let (opcode0_box, opcode1_box) = (divided_memory0_layout[0], divided_memory1_layout[0]);
 
         let divided_bottom_layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -478,8 +505,11 @@ impl<'a> RenderData<'a> {
 
         let (transaction_box, opcode_box) = (info_boxes[0], info_boxes[1]);
 
-        self.render_memory(0, memory0_box);
-        self.render_memory(1, memory1_box);
+        self.render_memory(vec![0, 1], vec![memory0_box, memory1_box]);
+
+        self.render_current_operation_box(0, opcode0_box);
+        self.render_current_operation_box(1, opcode1_box);
+
         self.render_chart(bottom_layout);
 
         if self.state.help {
