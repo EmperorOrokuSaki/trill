@@ -71,8 +71,8 @@ impl App {
         Ok(())
     }
 
-    fn render_frame(&self, frame: &mut Frame, mut state: &mut AppState) {
-        frame.render_stateful_widget(self, frame.size(), &mut state);
+    fn render_frame(&self, frame: &mut Frame, state: &mut AppState) {
+        frame.render_stateful_widget(self, frame.size(), state);
     }
 
     fn handle_event(&mut self, key: KeyEvent, state: &mut AppState) {
@@ -96,7 +96,7 @@ impl App {
             crossterm::event::KeyCode::Left => self.forward = false,
             crossterm::event::KeyCode::Right => self.forward = true,
             crossterm::event::KeyCode::Down => {
-                state.history_vertical_scroll = state.history_vertical_scroll + 1
+                state.history_vertical_scroll += 1
             }
             crossterm::event::KeyCode::Up => {
                 if state.history_vertical_scroll > 0 {

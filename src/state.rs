@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread::sleep, time::Duration};
+use std::collections::HashMap;
 
 use alloy::{
     primitives::{TxHash, Uint, U256},
@@ -49,7 +49,7 @@ impl AppState {
 
         if transactions.len() > 1 {
             // versus view
-            self.mode = AppMode::VERSUS;
+            self.mode = AppMode::Versus;
             let mut second_transaction_state = TransactionState::default();
             second_transaction_state.initialize(transactions[1], rpc).await.unwrap();
             transaction_states.push(second_transaction_state);
@@ -83,13 +83,13 @@ impl AppState {
 
 #[derive(Debug, Clone)]
 pub enum AppMode {
-    VERSUS,
-    NORMAL,
+    Versus,
+    Normal,
 }
 
 impl Default for AppMode {
     fn default() -> Self {
-        Self::NORMAL
+        Self::Normal
     }
 }
 
@@ -144,51 +144,51 @@ impl Default for OperationData {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SlotStatus {
-    INIT,
-    EMPTY,
-    ACTIVE,
-    READING,
-    WRITING,
-    UNREAD,
+    Init,
+    Empty,
+    Active,
+    Reading,
+    Writing,
+    Unread,
 }
 
 impl Default for SlotStatus {
     fn default() -> Self {
-        Self::INIT
+        Self::Init
     }
 }
 
 impl SlotStatus {
     pub fn text(&self) -> &'static str {
         match self {
-            SlotStatus::INIT => "Initializing",
-            SlotStatus::EMPTY => "Empty",
-            SlotStatus::ACTIVE => "Active",
-            SlotStatus::READING => "Reading",
-            SlotStatus::WRITING => "Writing",
-            SlotStatus::UNREAD => "Unread",
+            SlotStatus::Init => "Initializing",
+            SlotStatus::Empty => "Empty",
+            SlotStatus::Active => "Active",
+            SlotStatus::Reading => "Reading",
+            SlotStatus::Writing => "Writing",
+            SlotStatus::Unread => "Unread",
         }
     }
 
     pub fn from_opcode(op: &Operations) -> SlotStatus {
         match op {
-            Operations::CALLDATACOPY => SlotStatus::WRITING,
-            Operations::MSTORE => SlotStatus::WRITING,
-            Operations::MSTORE8 => SlotStatus::WRITING,
-            Operations::MLOAD => SlotStatus::READING,
-            Operations::MSIZE => SlotStatus::READING,
-            Operations::EXTCODECOPY => SlotStatus::WRITING,
-            Operations::CODECOPY => SlotStatus::WRITING,
-            Operations::RETURNDATACOPY => SlotStatus::WRITING,
-            Operations::MCOPY => SlotStatus::WRITING,
-            Operations::OTHER(_) => SlotStatus::EMPTY,
+            Operations::CALLDATACOPY => SlotStatus::Writing,
+            Operations::MSTORE => SlotStatus::Writing,
+            Operations::MSTORE8 => SlotStatus::Writing,
+            Operations::MLOAD => SlotStatus::Reading,
+            Operations::MSIZE => SlotStatus::Reading,
+            Operations::EXTCODECOPY => SlotStatus::Writing,
+            Operations::CODECOPY => SlotStatus::Writing,
+            Operations::RETURNDATACOPY => SlotStatus::Writing,
+            Operations::MCOPY => SlotStatus::Writing,
+            Operations::OTHER(_) => SlotStatus::Empty,
         }
     }
 }
 
 impl TransactionState {
     pub async fn initialize(&mut self, transaction: TxHash, rpc: &str) -> Result<(), eyre::Error> {
-        let provider = provider::HTTPProvider::new(rpc).await?;
+        let provider = provider::HTTPProvider::init(rpc).await?;
         let transaction_result = provider.get_transaction_by_hash(transaction).await?;
         self.transaction = transaction_result;
         let opts = GethDebugTracingOptions {
@@ -209,20 +209,17 @@ impl TransactionState {
 
         let result = provider.debug_trace_transaction(transaction, opts).await?;
 
-        match result {
-            GethTrace::JS(context) => {
-                self.transaction_success = !serde_json::from_value(context["failed"].clone())?;
-                self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
-                let max_memory_length = self
-                    .raw_data
-                    .iter()
-                    .filter(|operation| operation.memory.is_some())
-                    .map(|operation| operation.memory.as_ref().unwrap().len())
-                    .max()
-                    .unwrap_or(0);
-                self.slots = vec![SlotStatus::EMPTY; max_memory_length];
-            }
-            _ => (),
+        if let GethTrace::JS(context) = result {
+            self.transaction_success = !serde_json::from_value(context["failed"].clone())?;
+            self.raw_data = serde_json::from_value(context["structLogs"].clone())?;
+            let max_memory_length = self
+                .raw_data
+                .iter()
+                .filter(|operation| operation.memory.is_some())
+                .map(|operation| operation.memory.as_ref().unwrap().len())
+                .max()
+                .unwrap_or(0);
+            self.slots = vec![SlotStatus::Empty; max_memory_length];
         }
 
         Ok(())
@@ -245,7 +242,7 @@ impl TransactionState {
             .map(|index| to_index as usize - index - 1);
 
         if last_memory_affecting_op_index.is_none() {
-            return Ok(self);
+            Ok(self)
         } else {
             let operation = &self.raw_data[last_memory_affecting_op_index.unwrap()];
             self.next_slot_status =
@@ -259,7 +256,7 @@ impl TransactionState {
                         .unwrap()
                         .len()
                 {
-                    *slot = SlotStatus::EMPTY;
+                    *slot = SlotStatus::Empty;
                 } else if index
                     < self.raw_data[last_memory_affecting_op_index.unwrap() + 1]
                         .memory
@@ -272,7 +269,7 @@ impl TransactionState {
                 }
             }
             self.operation_codes.pop();
-            return Ok(self);
+            Ok(self)
         }
     }
 
@@ -280,19 +277,19 @@ impl TransactionState {
         let range_ending = self.raw_data.len() as u64;
 
         for slot in &mut self.slots {
-            if *slot == SlotStatus::INIT || *slot == SlotStatus::READING {
-                *slot = SlotStatus::ACTIVE;
+            if *slot == SlotStatus::Init || *slot == SlotStatus::Reading {
+                *slot = SlotStatus::Active;
             }
-            if *slot == SlotStatus::WRITING {
-                *slot = SlotStatus::UNREAD;
+            if *slot == SlotStatus::Writing {
+                *slot = SlotStatus::Unread;
             }
         }
 
         for operation_number in self.next_operation..range_ending {
             // going through all opcodes
             let operation = self.raw_data[operation_number as usize].clone();
-            if self.next_slot_status != SlotStatus::EMPTY
-                && self.next_slot_status != SlotStatus::INIT
+            if self.next_slot_status != SlotStatus::Empty
+                && self.next_slot_status != SlotStatus::Init
             {
                 // Condition to check if the memory is affected in this operation as a result of the
                 // previous operation Memory is affected
@@ -311,7 +308,7 @@ impl TransactionState {
                 }
 
                 match self.next_slot_status {
-                    SlotStatus::READING => {
+                    SlotStatus::Reading => {
                         let new_number = self.read_dataset.last().unwrap_or(&(0.0, 0.0)).1
                             + new_slots as f64
                             + self.slot_indexes_to_change_status.len() as f64;
@@ -337,7 +334,7 @@ impl TransactionState {
                             self.write_dataset.push(last_write);
                         }
                     }
-                    SlotStatus::WRITING => {
+                    SlotStatus::Writing => {
                         let new_number = self.write_dataset.last().unwrap_or(&(0.0, 0.0)).1
                             + new_slots as f64
                             + self.slot_indexes_to_change_status.len() as f64;
@@ -361,7 +358,7 @@ impl TransactionState {
                 for index in self.slot_indexes_to_change_status.clone() {
                     if index < 0 {
                         // It's a read from MCOPY
-                        self.slots[(index * -1) as usize] = SlotStatus::READING;
+                        self.slots[-index as usize] = SlotStatus::Reading;
                         continue;
                     }
                     self.slots[index as usize] = self.next_slot_status;
@@ -409,7 +406,7 @@ impl TransactionState {
                         pc: operation.pc,
                         params: HashMap::new(),
                     };
-                    self.next_slot_status = SlotStatus::EMPTY;
+                    self.next_slot_status = SlotStatus::Empty;
                 }
                 _ => {
                     let operation_text = Operations::from_text(operation.op.as_str()); // Only one call
@@ -440,8 +437,7 @@ impl TransactionState {
         match opcode {
             Operations::MCOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
-                let memory_offset =
-                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 let copy_offset =
                     unwrapped_stack.get(unwrapped_stack.len() - 2).unwrap() / Uint::from(32);
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
@@ -455,7 +451,7 @@ impl TransactionState {
                 for i in
                     copy_offset.to::<i64>()..=(copy_offset + memory_end - Uint::from(1)).to::<i64>()
                 {
-                    self.slot_indexes_to_change_status.push(i * -1);
+                    self.slot_indexes_to_change_status.push(-i);
                 }
             }
             Operations::MSTORE => {
@@ -478,8 +474,7 @@ impl TransactionState {
             }
             Operations::CODECOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
-                let memory_offset =
-                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
                     / Uint::from(32);
@@ -491,8 +486,7 @@ impl TransactionState {
             }
             Operations::RETURNDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
-                let memory_offset =
-                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
                     / Uint::from(32);
@@ -517,8 +511,7 @@ impl TransactionState {
             }
             Operations::CALLDATACOPY => {
                 let unwrapped_stack = stack.as_ref().unwrap();
-                let memory_offset =
-                    unwrapped_stack.get(unwrapped_stack.len() - 1).unwrap() / Uint::from(32);
+                let memory_offset = unwrapped_stack.last().unwrap() / Uint::from(32);
                 let memory_end = ((unwrapped_stack.get(unwrapped_stack.len() - 3).unwrap())
                     + Uint::from(31))
                     / Uint::from(32);

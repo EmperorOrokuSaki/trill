@@ -9,10 +9,10 @@ pub struct HTTPProvider {
 }
 
 impl HTTPProvider {
-    pub async fn new(rpc: &str) -> Result<RootProvider<BoxTransport>, eyre::Error> {
+    pub async fn init(rpc: &str) -> Result<RootProvider<BoxTransport>, eyre::Error> {
         match ProviderBuilder::new().on_builtin(rpc).await {
-            Ok(provider) => return Ok(provider),
-            Err(error) => return Err(eyre!(error)),
+            Ok(provider) => Ok(provider),
+            Err(error) => Err(eyre!(error)),
         }
     }
 }

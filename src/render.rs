@@ -1,6 +1,3 @@
-use std::{thread::sleep, time::Duration};
-
-use color_eyre::owo_colors::OwoColorize;
 use itertools::Itertools;
 use ratatui::{
     buffer::Buffer,
@@ -60,7 +57,7 @@ impl<'a> RenderData<'a> {
                 if first_slot >= memory.len() {
                     first_slot = memory.len() - 1;
                 }
-                let data = memory.into_iter().skip(first_slot).enumerate();
+                let data = memory.iter().skip(first_slot).enumerate();
                 for (index, slot) in data {
                     if index >= height {
                         break;
@@ -70,12 +67,12 @@ impl<'a> RenderData<'a> {
                     for chunk in &slot.chars().chunks(2) {
                         let pair: String = chunk.collect();
                         match transaction_state.slots[index + first_slot] {
-                            SlotStatus::EMPTY => row.push(Cell::new(pair).gray()),
-                            SlotStatus::ACTIVE => row.push(Cell::new(pair).green()),
-                            SlotStatus::READING => row.push(Cell::new(pair).blue()),
-                            SlotStatus::WRITING => row.push(Cell::new(pair).red()),
-                            SlotStatus::UNREAD => row.push(Cell::new(pair).magenta()),
-                            SlotStatus::INIT => (),
+                            SlotStatus::Empty => row.push(Cell::new(pair).gray()),
+                            SlotStatus::Active => row.push(Cell::new(pair).green()),
+                            SlotStatus::Reading => row.push(Cell::new(pair).blue()),
+                            SlotStatus::Writing => row.push(Cell::new(pair).red()),
+                            SlotStatus::Unread => row.push(Cell::new(pair).magenta()),
+                            SlotStatus::Init => (),
                         }
                     }
                     rows.push(Row::new(row));
@@ -101,12 +98,12 @@ impl<'a> RenderData<'a> {
 
             for slot in first_slot..range_ending {
                 match transaction_state.slots[slot] {
-                    SlotStatus::EMPTY => row.push(Cell::new("■").gray()),
-                    SlotStatus::ACTIVE => row.push(Cell::new("■").green()),
-                    SlotStatus::READING => row.push(Cell::new("■").blue()),
-                    SlotStatus::WRITING => row.push(Cell::new("■").red()),
-                    SlotStatus::UNREAD => row.push(Cell::new("■").magenta()),
-                    SlotStatus::INIT => (),
+                    SlotStatus::Empty => row.push(Cell::new("■").gray()),
+                    SlotStatus::Active => row.push(Cell::new("■").green()),
+                    SlotStatus::Reading => row.push(Cell::new("■").blue()),
+                    SlotStatus::Writing => row.push(Cell::new("■").red()),
+                    SlotStatus::Unread => row.push(Cell::new("■").magenta()),
+                    SlotStatus::Init => (),
                 }
                 if slot % width == width - 1 || slot == transaction_state.slots.len() - 1 {
                     rows.push(Row::new(row.clone()));
@@ -184,8 +181,8 @@ impl<'a> RenderData<'a> {
         let mut vec = vec![];
         let op = &transaction_state.operation_to_render;
         let operation_code = match SlotStatus::from_opcode(&op.operation) {
-            SlotStatus::READING => Cell::new(op.operation.text()).blue(),
-            SlotStatus::WRITING => Cell::new(op.operation.text()).red(),
+            SlotStatus::Reading => Cell::new(op.operation.text()).blue(),
+            SlotStatus::Writing => Cell::new(op.operation.text()).red(),
             _ => Cell::new(op.operation.text()).yellow(),
         };
 
@@ -241,8 +238,8 @@ impl<'a> RenderData<'a> {
             .operation_codes
             .iter()
             .map(|op| match SlotStatus::from_opcode(op) {
-                SlotStatus::READING => Line::from(op.text()).style(Style::new().blue()),
-                SlotStatus::WRITING => Line::from(op.text()).style(Style::new().red()),
+                SlotStatus::Reading => Line::from(op.text()).style(Style::new().blue()),
+                SlotStatus::Writing => Line::from(op.text()).style(Style::new().red()),
                 _ => Line::from(op.text()).style(Style::new().yellow()),
             })
             .collect();
@@ -328,7 +325,7 @@ impl<'a> RenderData<'a> {
         // Create the Y axis and define its properties
         let write_y_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, transaction_state.write_dataset.last().unwrap().1 as f64])
+            .bounds([0.0, transaction_state.write_dataset.last().unwrap().1])
             .labels(vec![
                 "0".into(),
                 (transaction_state.write_dataset.last().unwrap().1).ceil().to_string().into(),
@@ -336,7 +333,7 @@ impl<'a> RenderData<'a> {
 
         let read_y_axis = Axis::default()
             .style(Style::default().white())
-            .bounds([0.0, transaction_state.read_dataset.last().unwrap().1 as f64])
+            .bounds([0.0, transaction_state.read_dataset.last().unwrap().1])
             .labels(vec![
                 "0".into(),
                 (transaction_state.read_dataset.last().unwrap().1).ceil().to_string().into(),
@@ -550,12 +547,12 @@ impl<'a> RenderData<'a> {
 
         let mut y_axis_upper_bound: f64;
 
-        if transaction_zero.write_dataset.last().unwrap().1 as f64
-            >= transaction_one.write_dataset.last().unwrap().1 as f64
+        if transaction_zero.write_dataset.last().unwrap().1
+            >= transaction_one.write_dataset.last().unwrap().1
         {
-            y_axis_upper_bound = transaction_zero.write_dataset.last().unwrap().1 as f64;
+            y_axis_upper_bound = transaction_zero.write_dataset.last().unwrap().1;
         } else {
-            y_axis_upper_bound = transaction_one.write_dataset.last().unwrap().1 as f64;
+            y_axis_upper_bound = transaction_one.write_dataset.last().unwrap().1;
         }
 
         // Create the X axis and define its properties
@@ -571,7 +568,6 @@ impl<'a> RenderData<'a> {
 
         // Create the chart and link all the parts together
         let chart = Chart::new(datasets)
-            .block(Block::default().title("Writes"))
             .x_axis(x_axis.clone())
             .y_axis(y_axis.clone())
             .block(block);
@@ -581,8 +577,8 @@ impl<'a> RenderData<'a> {
 
     pub fn render_all(&mut self) {
         match self.state.mode {
-            crate::state::AppMode::VERSUS => self.render_versus(),
-            crate::state::AppMode::NORMAL => self.render_normal(),
+            crate::state::AppMode::Versus => self.render_versus(),
+            crate::state::AppMode::Normal => self.render_normal(),
         }
     }
 }
