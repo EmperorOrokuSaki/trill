@@ -128,7 +128,7 @@ pub struct OperationData {
     pub remaining_gas: u64,
     pub gas_cost: u64,
     pub pc: u64,
-    pub stack: Option<Vec<U256>>
+    pub stack: Option<Vec<U256>>,
 }
 
 impl Default for OperationData {
@@ -139,7 +139,7 @@ impl Default for OperationData {
             remaining_gas: 0,
             gas_cost: 0,
             pc: 0,
-            stack: None
+            stack: None,
         }
     }
 }
@@ -407,7 +407,7 @@ impl TransactionState {
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
                         params: HashMap::new(),
-                        stack: operation.stack
+                        stack: operation.stack,
                     };
                     self.next_slot_status = SlotStatus::Empty;
                 }
@@ -420,7 +420,7 @@ impl TransactionState {
                         gas_cost: operation.gas_cost,
                         pc: operation.pc,
                         params: operation_text.parse_args(operation.stack.clone()),
-                        stack: operation.stack
+                        stack: operation.stack,
                     };
                 }
             }
