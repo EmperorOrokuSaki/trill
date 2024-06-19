@@ -567,10 +567,7 @@ impl<'a> RenderData<'a> {
             .labels(vec!["0".into(), y_axis_upper_bound.ceil().to_string().into()]);
 
         // Create the chart and link all the parts together
-        let chart = Chart::new(datasets)
-            .x_axis(x_axis.clone())
-            .y_axis(y_axis.clone())
-            .block(block);
+        let chart = Chart::new(datasets).x_axis(x_axis.clone()).y_axis(y_axis.clone()).block(block);
 
         Widget::render(chart, layout, self.buf);
     }

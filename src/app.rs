@@ -95,9 +95,7 @@ impl App {
             }
             crossterm::event::KeyCode::Left => self.forward = false,
             crossterm::event::KeyCode::Right => self.forward = true,
-            crossterm::event::KeyCode::Down => {
-                state.history_vertical_scroll += 1
-            }
+            crossterm::event::KeyCode::Down => state.history_vertical_scroll += 1,
             crossterm::event::KeyCode::Up => {
                 if state.history_vertical_scroll > 0 {
                     state.history_vertical_scroll -= 1;
