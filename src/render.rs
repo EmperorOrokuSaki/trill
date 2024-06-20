@@ -216,14 +216,14 @@ impl<'a> RenderData<'a> {
         }
 
         for index in 0..indexes_length {
+            let divided_layout = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(layouts[index]);
             let transaction_state = &self.state.transaction_states[index];
-            let title = Title::from(" Operation info ".bold());
-            let op_info_block = Block::default()
-                .title(title.alignment(Alignment::Center))
-                .borders(Borders::ALL)
-                .border_set(border::THICK);
+            let (op_info_layout, details_layout) = (divided_layout[0], divided_layout[1]);
 
-            let mut vec = vec![];
+            let mut info_vec = vec![];
             let op = &transaction_state.operation_to_render;
             let operation_code = match SlotStatus::from_opcode(&op.operation) {
                 SlotStatus::Reading => Cell::new(op.operation.text()).blue(),
@@ -231,7 +231,7 @@ impl<'a> RenderData<'a> {
                 _ => Cell::new(op.operation.text()).yellow(),
             };
 
-            vec.extend(vec![
+            info_vec.extend(vec![
                 Row::new(vec![Cell::new("Code").style(Style::new().gray()), operation_code]),
                 Row::new(vec![
                     Cell::new("Gas cost").style(Style::new().gray()),
@@ -247,21 +247,36 @@ impl<'a> RenderData<'a> {
                 ]),
             ]);
 
+            let mut details_vec = vec![];
             let params = &op.params;
             for (key, value) in params.iter() {
-                vec.push(Row::new(vec![
+                details_vec.push(Row::new(vec![
                     Cell::new(key.as_str()).style(Style::new().gray()),
                     Cell::new(value.as_str()).style(Style::new().green()),
                 ]));
             }
 
-            let op_info_rows = vec;
+            let op_info_block = Block::default()
+                .title(Title::from(" Opcode Info ".bold()).alignment(Alignment::Center))
+                .borders(Borders::TOP | Borders::LEFT)
+                .border_set(border::PLAIN);
+
+            let op_details_block = Block::default()
+                .title(Title::from(" Opcode Parameters ".bold()).alignment(Alignment::Center))
+                .borders(Borders::TOP | Borders::RIGHT)
+                .border_set(border::PLAIN);
+
             let op_info_table =
-                Table::new(op_info_rows, [Constraint::Percentage(20), Constraint::Fill(1)])
+                Table::new(info_vec, [Constraint::Percentage(40), Constraint::Fill(1)])
                     .block(op_info_block);
+            let op_details_table =
+                Table::new(details_vec, [Constraint::Percentage(40), Constraint::Fill(1)])
+                    .block(op_details_block);
+
             let mut s = TableState::default();
 
-            StatefulWidget::render(op_info_table, layouts[index], self.buf, &mut s);
+            StatefulWidget::render(op_info_table, op_info_layout, self.buf, &mut s);
+            StatefulWidget::render(op_details_table, details_layout, self.buf, &mut s);
         }
     }
 
@@ -553,27 +568,27 @@ impl<'a> RenderData<'a> {
 
         let divided_memory0_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(75)])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(divided_memory_layout[0]);
 
         let divided_memory1_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(75)])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(divided_memory_layout[1]);
 
         let (memory0_box, memory1_box) = (divided_memory0_layout[1], divided_memory1_layout[1]);
 
         let divided_info0_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints(vec![Constraint::Fill(5), Constraint::Fill(2)])
             .split(divided_memory0_layout[0]);
 
         let divided_info1_layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints(vec![Constraint::Fill(5), Constraint::Fill(2)])
             .split(divided_memory1_layout[0]);
 
-        let (opcode0_box, opcode1_box) = (divided_memory0_layout[0], divided_memory1_layout[0]);
+        let (opcode0_box, opcode1_box) = (divided_info0_layout[0], divided_info1_layout[0]);
         let (stack0_box, stack1_box) = (divided_info0_layout[1], divided_info1_layout[1]);
 
         let divided_bottom_layout = Layout::default()
