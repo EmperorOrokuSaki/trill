@@ -20,12 +20,16 @@ use state::AppState;
 async fn main() -> Result<(), eyre::Error> {
     initialize_logging()?;
     let cli = Cli::parse();
-    let transaction = TxHash::from_str(cli.transaction.as_str())?;
+    let transactions: Vec<TxHash> = cli
+        .transaction
+        .iter()
+        .map(|transaction| TxHash::from_str(transaction.as_str()).unwrap())
+        .collect();
     let fps = cli.fps;
     let iteration = cli.iteration;
     let rpc = cli.rpc;
     let mut app_state = AppState::default();
-    app_state.initialize(transaction, &rpc).await?;
+    app_state.init(&rpc, transactions).await?;
     App::default().run(&mut app_state, fps, iteration).await?;
     Ok(())
 }
