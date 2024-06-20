@@ -257,13 +257,13 @@ impl<'a> RenderData<'a> {
             }
 
             let op_info_block = Block::default()
-                .title(Title::from(" Opcode Info ".bold()).alignment(Alignment::Center))
-                .borders(Borders::TOP | Borders::LEFT)
+                .title(Title::from(" Opcode Info ").alignment(Alignment::Left))
+                .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
                 .border_set(border::PLAIN);
 
             let op_details_block = Block::default()
-                .title(Title::from(" Opcode Parameters ".bold()).alignment(Alignment::Center))
-                .borders(Borders::TOP | Borders::RIGHT)
+                .title(Title::from(" Opcode Parameters ").alignment(Alignment::Left))
+                .borders(Borders::TOP | Borders::RIGHT | Borders::BOTTOM)
                 .border_set(border::PLAIN);
 
             let op_info_table =
@@ -457,13 +457,10 @@ impl<'a> RenderData<'a> {
                 .block(Block::bordered().title("Stack"))
                 .bar_width(1)
                 .bar_style(Style::new().white())
-                .value_style(Style::new().red().bold())
+                .value_style(Style::new().yellow().bold())
                 .label_style(Style::new().white())
                 .direction(Direction::Horizontal)
                 .data(&[("Size", bar_value as u64)])
-                // .data(
-                //     BarGroup::default().bars(&[Bar::default().value(10)]),
-                // )
                 .max(max_value as u64);
             Widget::render(chart, layouts[index], self.buf);
         }
@@ -628,7 +625,7 @@ impl<'a> RenderData<'a> {
         let transaction_zero = &self.state.transaction_states[0];
         let transaction_one = &self.state.transaction_states[1];
 
-        let title = Title::from(" Reads & Writes ".bold().red());
+        let title = Title::from(" Reads & Writes ".bold().white());
 
         let instructions = Title::from(Line::from(vec![
             " • Tx0 Writes ".bold().red(),
